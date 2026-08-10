@@ -17,9 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeMemoryModal = document.getElementById("close-memory-modal");
     const memoryItemsList = document.getElementById("memory-items-list");
 
-    // Audio & VAD (Voice Activity Detection) Controls
+    // Audio & VAD Controls
     let isMuted = false;
-    let isPushToTalkOn = false;
     let isSpeaking = false;
     let currentState = "IDLE";
     let lastProcessedPrompt = "";
@@ -48,8 +47,8 @@ document.addEventListener("DOMContentLoaded", () => {
         fetch("/api/telemetry")
             .then(res => res.json())
             .then(data => {
-                if (telemetryCpu) telemetryCpu.innerText = `CPU: ${data.cpu}`;
-                if (telemetryRam) telemetryRam.innerText = `RAM: ${data.ram}`;
+                if (telemetryCpu) telemetryCpu.innerText = `${data.cpu}`;
+                if (telemetryRam) telemetryRam.innerText = `${data.ram}`;
             })
             .catch(() => {});
     }
@@ -124,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
         requestAnimationFrame(drawDynamicVisualizer);
     }
 
-    // 🔊 Voice Activity Detection (VAD) Engine via Web Audio API
+    // Voice Activity Detection (VAD) Engine
     function initVAD() {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             navigator.mediaDevices.getUserMedia({ audio: true })
@@ -146,7 +145,6 @@ document.addEventListener("DOMContentLoaded", () => {
                         }
                         const averageVolume = sum / dataArray.length;
 
-                        // Silence Threshold (< 12): Auto-suspend microphone
                         if (averageVolume < 12 && currentState === "LISTENING") {
                             if (statusText) statusText.innerText = "🔇 Silent (VAD Suspended Mic)";
                         } else if (averageVolume >= 12 && currentState === "LISTENING") {
@@ -322,7 +320,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.lastSubmitTime = Date.now();
 
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "✦ Evaluating Query...";
+        if (statusText) statusText.innerText = "🤖 Evaluating Query...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -331,7 +329,6 @@ document.addEventListener("DOMContentLoaded", () => {
         appendMessage("user", promptText);
         const thinkingId = appendThinkingIndicator();
 
-        // Direct Ollama REST API Routing
         fetch("http://localhost:11434/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -373,12 +370,10 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // 🧮 Flexible JS Math Expression Parser (no rigid regex!)
     function evaluateWithFlexibleMathParser(prompt) {
         const cleanPrompt = prompt.trim();
         const lower = cleanPrompt.toLowerCase();
 
-        // 1. Math Expression Tokenizer & Evaluator
         try {
             const mathCandidate = cleanPrompt.replace(/[a-zA-Z\?\,\!\=\:\_]/g, '').trim();
             if (mathCandidate && mathCandidate.length >= 3 && /[\+\-\*\/\%\^]/.test(mathCandidate)) {
@@ -390,7 +385,6 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         } catch(e) {}
 
-        // Percentage Calculation
         const pctMatch = lower.match(/(\d+\.?\d*)\s*%\s*of\s*(\d+\.?\d*)/);
         if (pctMatch) {
             const pct = parseFloat(pctMatch[1]);
@@ -400,18 +394,15 @@ document.addEventListener("DOMContentLoaded", () => {
             return `🧮 **Calculated Result**: ${pct}% of ${val} = **${formatted}**`;
         }
 
-        // Code Generation Requests
         if (lower.includes("code") || lower.includes("python") || lower.includes("script")) {
             const sampleCode = `import os, shutil\n# File Organizer Script\ndef organize_files(folder='.'):\n    for f in os.listdir(folder):\n        if os.path.isfile(f) and '.' in f:\n            ext = f.split('.')[-1]\n            os.makedirs(ext, exist_ok=True)\n            shutil.move(f, os.path.join(ext, f))\n    print('Files organized cleanly!')\n\norganize_files('.')`;
             return `💻 **Generated Python Script**:\n\`\`\`python\n${sampleCode}\n\`\`\`\n<div class="code-exec-card"><div class="code-exec-header"><span>🔒 Requires Human Confirmation</span><button class="run-code-btn" onclick="executeSandboxCode('${btoa(sampleCode)}')">▶️ Run Code in Sandbox</button></div></div>`;
         }
 
-        return `🌸 **Answer for '${cleanPrompt}'**:\nProcessed locally on your device. Let me know if you want me to calculate math, convert units, or summarize! 😊`;
+        return `🤖 **Direct Answer for '${cleanPrompt}'**:\nProcessed locally on your device with 100% data privacy. Let me know if you'd like to run calculations, search the web, or inspect system status! 😊`;
     }
 
-    // ⚡ Dynamic Context Chips Generator based on Output Type
     function generateDynamicContextChips(responseText) {
-        // Output Type 1: Numeric / Math Result -> Show Math & Unit Chips
         if (responseText.includes("Calculated Result") || /\=\s*\*\*\d+/.test(responseText)) {
             const numMatch = responseText.match(/\*\*(.*?)\*\*/);
             const val = numMatch ? numMatch[1] : "0";
@@ -422,7 +413,6 @@ document.addEventListener("DOMContentLoaded", () => {
             ];
         }
 
-        // Output Type 2: Code Output -> Show Code Actions
         if (responseText.includes("```python") || responseText.includes("Generated Python")) {
             return [
                 "⚡ Explain Code Step-by-Step",
@@ -431,12 +421,11 @@ document.addEventListener("DOMContentLoaded", () => {
             ];
         }
 
-        // Output Type 3: Standard Text Answer -> Show Text Actions
         return [
-            "⚡ Summarize Output",
-            "⚡ Copy Output to Clipboard",
-            "⚡ Translate to Marathi (मराठी)",
-            "⚡ Translate to Hindi (हिंदी)"
+            "⚡ Search Web",
+            "⚡ Local Memory",
+            "⚡ System Audit",
+            "⚡ Summarize Output"
         ];
     }
 
@@ -471,7 +460,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             row.innerHTML = `
-                <div class="msg-avatar sparkle-avatar">✦</div>
+                <div class="msg-avatar">🤖</div>
                 <div class="msg-content">
                     ${formatMarkdown(text)}
                     ${suggestionsHtml}
@@ -493,7 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
         row.id = id;
         row.classList.add("msg-row", "assistant");
         row.innerHTML = `
-            <div class="msg-avatar sparkle-avatar">✦</div>
+            <div class="msg-avatar">🤖</div>
             <div class="msg-content"><p><em>Nikki evaluating query...</em></p></div>
         `;
         messagesList.appendChild(row);
