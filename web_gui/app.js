@@ -17,19 +17,134 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeMemoryModal = document.getElementById("close-memory-modal");
     const memoryItemsList = document.getElementById("memory-items-list");
 
-    // Audio & Voice Activity Detection (VAD) Controls
-    let isListening = false;
+    // Global Math State Memory
+    window.lastCalculatedResult = null;
+    window.lastCalculatedExpr = null;
+
+    // 🎙️ Continuous Microphone & Speech State
+    let micEnabled = false; // Toggle state for continuous mic
     let isSpeaking = false;
     let currentState = "IDLE";
     let lastProcessedPrompt = "";
-    let audioCtx = null;
-    let analyser = null;
-    let micStream = null;
+    let silenceTimer = null;
 
-    // Speech Recognition & Synthesis
-    const synth = window.speechSynthesis;
+    // Speech Recognition & Synthesis Setup
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const synth = window.speechSynthesis;
     let recognition = null;
+
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;      // Keeps microphone stream active continuously
+        recognition.interimResults = true;  // Displays transcript live while speaking
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+            if (isSpeaking) {
+                try { recognition.stop(); } catch(e){}
+                return;
+            }
+            currentState = "LISTENING";
+            if (micBtn) micBtn.classList.add("listening");
+            if (statusText) statusText.innerText = "🎙️ Continuous Mic Active...";
+        };
+
+        // Live interim transcript & auto-submit after 1.5s silence
+        recognition.onresult = (event) => {
+            if (isSpeaking || !micEnabled) return;
+
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            // Update live input field
+            if (userInput) {
+                userInput.value = finalTranscript || interimTranscript;
+            }
+
+            // Auto-submit 1.5 seconds after user finishes speaking final transcript
+            const cleanFinal = finalTranscript.trim();
+            if (cleanFinal.length > 0 && cleanFinal !== lastProcessedPrompt) {
+                clearTimeout(silenceTimer);
+                silenceTimer = setTimeout(() => {
+                    handleUserSubmit(cleanFinal);
+                    userInput.value = '';
+                }, 1500);
+            }
+        };
+
+        // Auto-restart stream on end if continuous mic is enabled
+        recognition.onend = () => {
+            if (micBtn) micBtn.classList.remove("listening");
+            if (micEnabled && !isSpeaking) {
+                try { recognition.start(); } catch (e) {}
+            } else {
+                currentState = "IDLE";
+                if (statusText) statusText.innerText = "100% Private & Local";
+            }
+        };
+
+        recognition.onerror = (event) => {
+            if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                currentState = "IDLE";
+                if (micBtn) micBtn.classList.remove("listening");
+            }
+        };
+    }
+
+    function startContinuousMic() {
+        if (recognition && micEnabled && !isSpeaking) {
+            try {
+                recognition.start();
+                updateMicUI(true);
+            } catch (e) {}
+        }
+    }
+
+    function stopContinuousMic() {
+        if (recognition) {
+            try {
+                recognition.stop();
+                updateMicUI(false);
+            } catch (e) {}
+        }
+    }
+
+    function toggleMicState() {
+        micEnabled = !micEnabled;
+        if (micEnabled) {
+            startContinuousMic();
+        } else {
+            stopContinuousMic();
+        }
+    }
+
+    function updateMicUI(isActive) {
+        if (contMicPill) {
+            contMicPill.innerHTML = isActive ? `<span>🎙️ Continuous Mic: ON</span>` : `<span>🔇 Mic: OFF</span>`;
+            if (isActive) contMicPill.classList.remove("off");
+            else contMicPill.classList.add("off");
+        }
+    }
+
+    if (contMicPill) {
+        contMicPill.addEventListener("click", () => {
+            toggleMicState();
+        });
+    }
+
+    if (micBtn) {
+        micBtn.addEventListener("click", () => {
+            toggleMicState();
+        });
+    }
 
     // Theme Switcher Handler
     if (themeSelect) {
@@ -122,65 +237,6 @@ document.addEventListener("DOMContentLoaded", () => {
         requestAnimationFrame(drawDynamicVisualizer);
     }
 
-    // Voice Activity Detection (VAD) Engine
-    function initVAD() {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-            navigator.mediaDevices.getUserMedia({ audio: true })
-                .then(stream => {
-                    micStream = stream;
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    analyser = audioCtx.createAnalyser();
-                    const source = audioCtx.createMediaStreamSource(stream);
-                    source.connect(analyser);
-                    analyser.fftSize = 256;
-
-                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                    setInterval(() => {
-                        if (!isListening || isSpeaking) return;
-                        analyser.getByteFrequencyData(dataArray);
-                        let sum = 0;
-                        for (let i = 0; i < dataArray.length; i++) {
-                            sum += dataArray[i];
-                        }
-                        const averageVolume = sum / dataArray.length;
-
-                        if (averageVolume < 12 && currentState === "LISTENING") {
-                            if (statusText) statusText.innerText = "🔇 Silent (VAD Suspended Mic)";
-                        } else if (averageVolume >= 12 && currentState === "LISTENING") {
-                            if (statusText) statusText.innerText = "🎙️ Voice Activity Detected!";
-                        }
-                    }, 200);
-                })
-                .catch(() => {});
-        }
-    }
-    initVAD();
-
-    // Toggle Push-to-Talk Toggle Button
-    if (contMicPill) {
-        contMicPill.addEventListener("click", () => {
-            toggleMic();
-        });
-    }
-
-    function toggleMic() {
-        if (!isListening) {
-            startListening();
-            isListening = true;
-            if (contMicPill) {
-                contMicPill.classList.remove("off");
-                contMicPill.innerHTML = `<span>🎙️ Listening...</span>`;
-            }
-        } else {
-            stopListening();
-            isListening = false;
-            if (contMicPill) {
-                contMicPill.classList.add("off");
-                contMicPill.innerHTML = `<span>🔇 Mic Off</span>`;
-            }
-        }
-    }
-
     // Memory Management Modal Control
     if (memoryBtn) {
         memoryBtn.addEventListener("click", () => {
@@ -234,71 +290,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }).then(() => loadMemoryDatabase()).catch(() => loadMemoryDatabase());
     };
 
-    // Setup Web Speech Recognition
-    if (SpeechRecognition) {
-        recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-
-        recognition.onstart = () => {
-            if (isSpeaking) {
-                stopListening();
-                return;
-            }
-            currentState = "LISTENING";
-            micBtn.classList.add("listening");
-            if (statusText) statusText.innerText = "🎙️ Listening...";
-        };
-
-        recognition.onresult = (event) => {
-            if (isSpeaking) return;
-            let transcript = event.results[0][0].transcript.trim();
-            if (transcript.toLowerCase().includes("hey nikki") || transcript.toLowerCase().includes("nikki")) {
-                transcript = transcript.replace(/hey nikki/gi, "").replace(/nikki/gi, "").trim();
-            }
-
-            if (transcript && transcript !== lastProcessedPrompt) {
-                userInput.value = transcript;
-                handleUserSubmit(transcript);
-            }
-        };
-
-        recognition.onerror = () => {
-            currentState = "IDLE";
-            micBtn.classList.remove("listening");
-            isListening = false;
-        };
-
-        recognition.onend = () => {
-            micBtn.classList.remove("listening");
-            if (!isSpeaking) {
-                currentState = "IDLE";
-                if (statusText) statusText.innerText = "100% Private & Local";
-                isListening = false;
-            }
-        };
-    }
-
-    function startListening() {
-        if (recognition && !isSpeaking) {
-            try {
-                recognition.start();
-            } catch (e) {}
-        }
-    }
-
-    function stopListening() {
-        if (recognition) {
-            try {
-                recognition.stop();
-            } catch (e) {}
-        }
-    }
-
-    micBtn.addEventListener("click", () => {
-        toggleMic();
-    });
-
     chatForm.addEventListener("submit", (e) => {
         e.preventDefault();
         const text = userInput.value.trim();
@@ -308,22 +299,38 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    window.sendQuickPrompt = function(promptText) {
+    window.sendQuickQuery = function(promptText) {
         handleUserSubmit(promptText);
+    };
+
+    // 🧮 Direct Quick Math Handler for State Memory Chips (e.g. handleQuickMath('9 * 2'))
+    window.handleQuickMath = function(expression) {
+        try {
+            const sanitized = expression.replace(/\^/g, '**');
+            const result = Function('"use strict";return (' + sanitized + ')')();
+            window.lastCalculatedResult = result;
+            window.lastCalculatedExpr = expression;
+
+            appendMessage("user", expression);
+            const mathHtml = renderMathResultCard(expression, result);
+            appendMessage("assistant", mathHtml, []);
+            speakOutLoud(`Calculated Result: ${expression} equals ${result}`);
+        } catch(e) {
+            handleUserSubmit(expression);
+        }
     };
 
     function handleUserSubmit(promptText) {
         if (isSpeaking) return;
-        stopListening();
-
-        if (promptText === lastProcessedPrompt && (Date.now() - window.lastSubmitTime) < 3000) {
+        
+        if (promptText === lastProcessedPrompt && (Date.now() - window.lastSubmitTime) < 2500) {
             return;
         }
         lastProcessedPrompt = promptText;
         window.lastSubmitTime = Date.now();
 
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "🤖 Evaluating via Ollama Llama3.2...";
+        if (statusText) statusText.innerText = "🤖 Evaluating Query...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -332,17 +339,20 @@ document.addEventListener("DOMContentLoaded", () => {
         appendMessage("user", promptText);
         const thinkingId = appendThinkingIndicator();
 
-        // Step 1: Pre-process Math Input ("2 into 2" -> "2 * 2")
-        const mathResult = tryEvaluateMath(promptText);
-        if (mathResult) {
+        // 1. Math Evaluation Check
+        const mathEval = tryEvaluateMath(promptText);
+        if (mathEval) {
             removeMessage(thinkingId);
-            const dynamicChips = renderDynamicChips('math', promptText);
-            appendMessage("assistant", mathResult, dynamicChips);
-            speakOutLoud(mathResult);
+            window.lastCalculatedResult = mathEval.result;
+            window.lastCalculatedExpr = mathEval.cleanExpr;
+            
+            const formattedMsg = renderMathResultCard(mathEval.cleanExpr, mathEval.result);
+            appendMessage("assistant", formattedMsg, []);
+            speakOutLoud(`Calculated Result: ${mathEval.cleanExpr} equals ${mathEval.result}`);
             return;
         }
 
-        // Step 2: Local Ollama LLM REST API Call (http://localhost:11434/api/generate)
+        // 2. Ollama LLM REST API Endpoint
         getNikkiResponse(promptText)
             .then(responseText => {
                 removeMessage(thinkingId);
@@ -366,7 +376,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    model: 'llama3.2', // or phi3 / qwen
+                    model: 'llama3.2',
                     prompt: userPrompt,
                     stream: false
                 })
@@ -374,7 +384,6 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await response.json();
             return data.response || evaluateFallbackPrompt(userPrompt);
         } catch (error) {
-            // Local Web Server Fallback
             try {
                 const res = await fetch("/api/task", {
                     method: "POST",
@@ -389,7 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Dynamic Math Evaluator (Normalizes phrasing like "2 into 2" to "2 * 2")
+    // 🧮 Math Parser (Normalizes "2 into 2" -> "2 * 2", "10 times 5" -> "10 * 5")
     function tryEvaluateMath(input) {
         try {
             let cleanInput = input
@@ -404,7 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const sanitized = cleanInput.replace(/\^/g, '**');
                 const result = Function('"use strict";return (' + sanitized + ')')();
                 if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
-                    return `🧮 **Calculated Answer**: \`${cleanInput}\` = **${result}**`;
+                    return { cleanExpr: cleanInput, result: result };
                 }
             }
         } catch (e) {
@@ -413,13 +422,29 @@ document.addEventListener("DOMContentLoaded", () => {
         return null;
     }
 
+    // Render Math Result Card with State-Preserving Dynamic Parameter Chips
+    function renderMathResultCard(expr, result) {
+        window.lastCalculatedResult = result;
+        const multVal = `${result} * 2`;
+        const divVal = `${result} / 2`;
+        const addVal = `${result} + 10`;
+
+        return `🧮 **Calculated Result**: \`${expr}\` = **${result}**
+<div class="action-chips" style="margin-top: 10px;">
+    <button class="followup-chip" onclick="handleQuickMath('${multVal}')">⚡ Multiply (${result}) by 2</button>
+    <button class="followup-chip" onclick="handleQuickMath('${divVal}')">⚡ Divide (${result}) by 2</button>
+    <button class="followup-chip" onclick="handleQuickMath('${addVal}')">⚡ Add 10 to (${result})</button>
+</div>`;
+    }
+
     // Dynamic Context Chips Renderer
     function renderDynamicChips(responseType, userQuery) {
-        if (responseType === 'math') {
+        if (responseType === 'math' && window.lastCalculatedResult !== null) {
+            const res = window.lastCalculatedResult;
             return [
-                "⚡ Explain Step-by-Step",
-                "⚡ Convert Units",
-                "⚡ Multiply by 2"
+                `⚡ Multiply (${res}) by 2`,
+                `⚡ Divide (${res}) by 2`,
+                `⚡ Convert Units`
             ];
         } else if (userQuery.toLowerCase().includes("code") || userQuery.toLowerCase().includes("python")) {
             return [
@@ -496,10 +521,6 @@ document.addEventListener("DOMContentLoaded", () => {
         chatScroll.scrollTop = chatScroll.scrollHeight;
     }
 
-    window.sendQuickQuery = function(promptText) {
-        handleUserSubmit(promptText);
-    };
-
     function appendThinkingIndicator() {
         const id = "thinking-" + Date.now();
         const row = document.createElement("div");
@@ -522,7 +543,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function speakOutLoud(text) {
         if (synth) {
             isSpeaking = true;
-            stopListening();
+            try { if (recognition) recognition.stop(); } catch(e){}
             currentState = "SPEAKING";
             if (statusText) statusText.innerText = "🔊 Nikki Speaking...";
 
@@ -534,11 +555,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 isSpeaking = false;
                 currentState = "IDLE";
                 if (statusText) statusText.innerText = "100% Private & Local";
+                if (micEnabled && recognition) {
+                    try { recognition.start(); } catch(e){}
+                }
             };
 
             utterance.onerror = () => {
                 isSpeaking = false;
                 currentState = "IDLE";
+                if (micEnabled && recognition) {
+                    try { recognition.start(); } catch(e){}
+                }
             };
 
             synth.speak(utterance);
