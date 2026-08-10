@@ -5,19 +5,116 @@ document.addEventListener("DOMContentLoaded", () => {
     const userInput = document.getElementById("user-input");
     const micBtn = document.getElementById("mic-btn");
     const chatScroll = document.getElementById("chat-scroll");
+    const contMicPill = document.getElementById("cont-mic-pill");
+    const statusText = document.getElementById("status-text");
 
-    // Speech Synthesis & Recognition
+    // Continuous Microphone State
+    let isContinuousMicOn = true;
+    let isSpeaking = false;
+    let currentState = "IDLE"; // IDLE, LISTENING, THINKING, SPEAKING
+
+    // Speech Recognition & Synthesis
     const synth = window.speechSynthesis;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
 
+    // Canvas Visualizer setup
+    const canvas = document.getElementById("dynamic-canvas");
+    let ctx = null;
+    if (canvas) {
+        ctx = canvas.getContext("2d");
+        resizeCanvas();
+        window.addEventListener("resize", resizeCanvas);
+        requestAnimationFrame(drawDynamicVisualizer);
+    }
+
+    function resizeCanvas() {
+        if (canvas) {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+    }
+
+    // Dynamic Canvas Particle & Wave Audio Spectrum
+    let particles = [];
+    for (let i = 0; i < 40; i++) {
+        particles.push({
+            x: Math.random() * window.innerWidth,
+            y: Math.random() * window.innerHeight,
+            radius: Math.random() * 3 + 1,
+            color: ["#4285f4", "#9b51e0", "#e91e63", "#34a853"][Math.floor(Math.random() * 4)],
+            vx: (Math.random() - 0.5) * 0.8,
+            vy: (Math.random() - 0.5) * 0.8
+        });
+    }
+
+    let phase = 0;
+    function drawDynamicVisualizer() {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Render ambient floating particles
+        particles.forEach(p => {
+            p.x += p.vx * (currentState === "THINKING" ? 2.5 : 1);
+            p.y += p.vy * (currentState === "THINKING" ? 2.5 : 1);
+
+            if (p.x < 0) p.x = canvas.width;
+            if (p.x > canvas.width) p.x = 0;
+            if (p.y < 0) p.y = canvas.height;
+            if (p.y > canvas.height) p.y = 0;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = p.color;
+            ctx.fill();
+        });
+
+        // Render dynamic sine waves at bottom when Listening/Speaking
+        if (currentState === "LISTENING" || currentState === "SPEAKING") {
+            phase += 0.05;
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = currentState === "LISTENING" ? "#4285f4" : "#e91e63";
+
+            for (let x = 0; x < canvas.width; x += 10) {
+                const y = canvas.height - 80 + Math.sin(x * 0.01 + phase) * (currentState === "SPEAKING" ? 25 : 15);
+                if (x === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+        }
+
+        requestAnimationFrame(drawDynamicVisualizer);
+    }
+
+    // Toggle Continuous Mic Mode
+    if (contMicPill) {
+        contMicPill.addEventListener("click", () => {
+            isContinuousMicOn = !isContinuousMicOn;
+            if (isContinuousMicOn) {
+                contMicPill.classList.remove("off");
+                contMicPill.innerHTML = `<span>🎙️ Continuous Mic: ON</span>`;
+                startListening();
+            } else {
+                contMicPill.classList.add("off");
+                contMicPill.innerHTML = `<span>🔇 Continuous Mic: OFF</span>`;
+                stopListening();
+            }
+        });
+    }
+
+    // Setup Web Speech Recognition
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
 
         recognition.onstart = () => {
-            micBtn.style.color = "#4285f4";
+            currentState = "LISTENING";
+            micBtn.classList.add("listening");
+            if (statusText) statusText.innerText = "🎙️ Nikki Listening...";
         };
 
         recognition.onresult = (event) => {
@@ -26,15 +123,55 @@ document.addEventListener("DOMContentLoaded", () => {
             handleUserSubmit(transcript);
         };
 
+        recognition.onerror = () => {
+            currentState = "IDLE";
+            micBtn.classList.remove("listening");
+            scheduleContinuousListen();
+        };
+
         recognition.onend = () => {
-            micBtn.style.color = "";
+            micBtn.classList.remove("listening");
+            if (!isSpeaking) {
+                currentState = "IDLE";
+                if (statusText) statusText.innerText = "100% Private & Active 24/7";
+                scheduleContinuousListen();
+            }
         };
     }
 
-    micBtn.addEventListener("click", () => {
-        if (recognition) {
-            recognition.start();
+    function startListening() {
+        if (recognition && !isSpeaking) {
+            try {
+                recognition.start();
+            } catch (e) {
+                // Ignore if already active
+            }
         }
+    }
+
+    function stopListening() {
+        if (recognition) {
+            try {
+                recognition.stop();
+            } catch (e) {}
+        }
+    }
+
+    function scheduleContinuousListen() {
+        if (isContinuousMicOn && !isSpeaking) {
+            setTimeout(() => {
+                startListening();
+            }, 800);
+        }
+    }
+
+    // Auto-start microphone on page load
+    setTimeout(() => {
+        if (isContinuousMicOn) startListening();
+    }, 1000);
+
+    micBtn.addEventListener("click", () => {
+        startListening();
     });
 
     chatForm.addEventListener("submit", (e) => {
@@ -51,17 +188,17 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     function handleUserSubmit(promptText) {
+        stopListening();
+        currentState = "THINKING";
+        if (statusText) statusText.innerText = "✦ Nikki Reasoning...";
+
         if (emptyState) {
             emptyState.style.display = "none";
         }
 
-        // Add User Message
         appendMessage("user", promptText);
-
-        // Add Thinking Indicator
         const thinkingId = appendThinkingIndicator();
 
-        // Send to Local API
         fetch("/api/task", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -76,7 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .catch(err => {
             removeMessage(thinkingId);
-            const fallbackText = `Nikki processed your request: "${promptText}". Running offline engine.`;
+            const fallbackText = `Nikki processed your request: "${promptText}". Running local engine.`;
             appendMessage("assistant", fallbackText);
             speakOutLoud(fallbackText);
         });
@@ -122,20 +259,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function speakOutLoud(text) {
         if (synth) {
-            const cleanText = text.replace(/[*#`]/g, "").slice(0, 200);
+            isSpeaking = true;
+            currentState = "SPEAKING";
+            if (statusText) statusText.innerText = "🔊 Nikki Speaking...";
+
+            const cleanText = text.replace(/[*#`]/g, "").slice(0, 300);
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.rate = 1.0;
+
+            utterance.onend = () => {
+                isSpeaking = false;
+                currentState = "IDLE";
+                if (statusText) statusText.innerText = "100% Private & Active 24/7";
+                scheduleContinuousListen();
+            };
+
+            utterance.onerror = () => {
+                isSpeaking = false;
+                currentState = "IDLE";
+                scheduleContinuousListen();
+            };
+
             synth.speak(utterance);
+        } else {
+            scheduleContinuousListen();
         }
     }
 
     function formatMarkdown(text) {
         let html = escapeHtml(text);
-        // Code Blocks
         html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
-        // Bold
         html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-        // Line breaks
         html = html.replace(/\n/g, '<br>');
         return html;
     }

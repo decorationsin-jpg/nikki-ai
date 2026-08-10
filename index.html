@@ -10,6 +10,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
+    <!-- Dynamic Animated Screen Background Canvas -->
+    <canvas id="dynamic-canvas"></canvas>
+
     <!-- Top Navbar -->
     <header class="gemini-header">
         <div class="brand">
@@ -18,9 +21,12 @@
             <span class="model-badge">3.6 Pro Local</span>
         </div>
         <div class="header-right">
+            <div class="cont-mic-pill" id="cont-mic-pill">
+                <span>🎙️ Continuous Mic: ON</span>
+            </div>
             <div class="status-tag">
                 <span class="status-dot"></span>
-                <span>100% Private & Active 24/7</span>
+                <span id="status-text">100% Private & Active 24/7</span>
             </div>
         </div>
     </header>
@@ -62,7 +68,7 @@
         <!-- Floating Input Container at Bottom -->
         <div class="input-floating-container">
             <form id="chat-form" class="input-row">
-                <input type="text" id="user-input" class="gemini-input" placeholder="Ask Nikki anything or type a command..." autocomplete="off">
+                <input type="text" id="user-input" class="gemini-input" placeholder="Ask Nikki anything or speak out loud..." autocomplete="off">
                 
                 <div class="input-actions">
                     <button type="button" id="mic-btn" class="action-btn" title="Voice Input">
@@ -77,7 +83,7 @@
                     </button>
                 </div>
             </form>
-            <div class="disclaimer">Nikki is 100% private. All tasks, voice audio, and memory run locally on your device without third-party APIs.</div>
+            <div class="disclaimer">Continuous Voice Mode is Active. Nikki listens and speaks back to you hands-free.</div>
         </div>
     </div>
 
