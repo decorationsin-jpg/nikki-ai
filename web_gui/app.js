@@ -59,6 +59,9 @@ document.addEventListener("DOMContentLoaded", () => {
         confidence: 0.90
     };
 
+    // 🔁 Anti-Repetition Response History Buffer
+    window.recentResponseHistory = [];
+
     function updateEmotionState(userPrompt) {
         const lower = userPrompt.toLowerCase();
         let newMood = "AFFECTIONATE";
@@ -92,6 +95,17 @@ document.addEventListener("DOMContentLoaded", () => {
         if (emotionMoodIcon) emotionMoodIcon.innerText = icon;
         if (emotionMoodText) emotionMoodText.innerText = `Mood: ${newMood}`;
         return newMood;
+    }
+
+    function selectNonRepetitiveResponse(options) {
+        const freshOptions = options.filter(opt => !window.recentResponseHistory.includes(opt));
+        const selected = freshOptions.length > 0 ? freshOptions[Math.floor(Math.random() * freshOptions.length)] : options[Math.floor(Math.random() * options.length)];
+        
+        window.recentResponseHistory.push(selected);
+        if (window.recentResponseHistory.length > 20) {
+            window.recentResponseHistory.shift();
+        }
+        return selected;
     }
 
     // View Navigation Handler
@@ -163,70 +177,22 @@ document.addEventListener("DOMContentLoaded", () => {
     // 🌐 11-Language Multilingual Dictionary & Locale Map
     const MULTILINGUAL_DICTIONARY = {
         "en": {
-            greeting: "Good morning... ❤️ I'm NIKKI. What would you like to do today?",
-            here_for_you: "Of course, I'm here for you. ❤️",
-            working_on_it: "Sure! Let me take care of that for you. ❤️",
-            success: "Done! That worked perfectly. I'm happy I could help. ❤️"
+            greeting: ["Good morning... ❤️ I'm NIKKI. What would you like to do today?", "Morning... I'm right here for you. ❤️", "Good morning! Ready whenever you are. 😊"],
+            here_for_you: ["Of course, I'm here for you. ❤️", "I'm right here... tell me what you need. ❤️", "Always here for you. ✨"],
+            working_on_it: ["Sure! Let me take care of that for you. ❤️", "All set! I've taken care of that. 😊", "Finished! Everything is done. ✨"],
+            success: ["Done! That worked perfectly. I'm happy I could help. ❤️", "Finished cleanly! Ready for your next task. ✨"]
         },
         "hi": {
-            greeting: "नमस्ते... ❤️ मैं निक्की हूँ। आज मैं आपकी क्या मदद कर सकती हूँ?",
-            here_for_you: "बिल्कुल… मैं यहीं हूँ आपके लिए। ❤️",
-            working_on_it: "जी बिल्कुल, मैं आपके लिए यह कर देती हूँ। ❤️",
-            success": "हो गया! यह काम एकदम सही हुआ। ❤️"
+            greeting: ["नमस्ते... ❤️ मैं निक्की हूँ। आज मैं आपकी क्या मदद कर सकती हूँ?", "सुप्रभात... मैं आपके साथ हूँ। ❤️"],
+            here_for_you: ["बिल्कुल… मैं यहीं हूँ आपके लिए। ❤️", "मैं हमेशा आपके साथ हूँ। ✨"],
+            working_on_it: ["जी बिल्कुल, मैं आपके लिए यह कर देती हूँ। ❤️"],
+            success: ["हो गया! यह काम एकदम सही हुआ। ❤️"]
         },
         "mr": {
-            greeting: "शुभ प्रभात... ❤️ मी नक्की आहे. आज आपण काय करूया?",
-            here_for_you: "नक्की… मी तुझ्यासाठी इथेच आहे. ❤️",
-            working_on_it: "हो नक्की, मी तुझ्यासाठी हे करून देते. ❤️",
-            success": "झालं! हे काम पूर्ण झालं आहे. ❤️"
-        },
-        "bn": {
-            greeting: "শুভ সকাল... ❤️ আমি নিক্কি। আজ আপনাকে কীভাবে সাহায্য করতে পারি?",
-            here_for_you: "অবশ্যই… আমি তোমার জন্য আছি। ❤️",
-            working_on_it: "অবশ্যই, আমি আপনার জন্য এটি করে দিচ্ছি। ❤️",
-            success": "হয়ে গেছে! কাজটা একদম নিখুঁত হয়েছে। ❤️"
-        },
-        "gu": {
-            greeting: "સુપ્રભાત... ❤️ હું નિક્કી છું. આજે હું તમારી શું મદદ કરી શકું?",
-            here_for_you: "ચોક્કસ… હું તમારા માટે અહીં જ છું. ❤️",
-            working_on_it: "હા ચોક્કસ, હું તમારા માટે આ કરી દઉં છું. ❤️",
-            success": "થઈ ગયું! આ કામ એકદમ યોગ્ય રીતે થયું. ❤️"
-        },
-        "ta": {
-            greeting: "காலை வணக்கம்... ❤️ நான் நிக்கி. இன்று உங்களுக்கு எவ்வாறு உதவட்டும்?",
-            here_for_you: "நிச்சயமாக… நான் உங்களுக்காக இங்கே இருக்கிறேன். ❤️",
-            working_on_it: "நிச்சயமாக, நான் உங்களுக்காக இதைச் செய்கிறேன். ❤️",
-            success": "முடிந்தது! இது மிகச்சரியாக முடிந்தது. ❤️"
-        },
-        "te": {
-            greeting: "శుభోదయం... ❤️ నేను నిక్కి. ఈరోజు మీకు ఎలా సహాయపడను?",
-            here_for_you: "తప్పకుండా… నేను మీ కోసం ఇక్కడే ఉన్నాను. ❤️",
-            working_on_it: "ఖచ్చితంగా, నేను మీ కోసం ఇది చేస్తాను. ❤️",
-            success": "పూర్తయింది! ఇది చాలా చక్కగా జరిగింది. ❤️"
-        },
-        "kn": {
-            greeting: "ಶುಭೋದಯ... ❤️ ನಾನು ನಿಕ್ಕಿ. ಇಂದು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?",
-            here_for_you: "ಖಂಡಿತ... ನಾನು ನಿಮಗಾಗಿ ಇಲ್ಲಿದ್ದೇನೆ. ❤️",
-            working_on_it: "ಖಂಡಿತ, ನಾನು ನಿಮಗಾಗಿ ಇದನ್ನು ಮಾಡುತ್ತೇನೆ. ❤️",
-            success": "ಆಯಿತು! ಇದು ಯಶಸ್ವಿಯಾಗಿ ಪೂರ್ಣಗೊಂಡಿದೆ. ❤️"
-        },
-        "ml": {
-            greeting: "സുപ്രഭാതം... ❤️ ഞാൻ നിക്കി. ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം?",
-            here_for_you: "തീർച്ചയായും... ഞാൻ നിങ്ങൾക്കായി ഇവിടെയുണ്ട്. ❤️",
-            working_on_it: "തീർച്ചയായും, ഞാൻ നിങ്ങൾക്കായി ഇത് ചെയ്യാം. ❤️",
-            success": "കഴിഞ്ഞു! ഇത് മികച്ചതായി പൂർത്തിയായി. ❤️"
-        },
-        "pa": {
-            greeting: "ਸ਼ੁਭ ਸਵੇਰ... ❤️ ਮੈਂ ਨਿੱਕੀ ਹਾਂ। ਅੱਜ ਮੈਂ ਤੁਹਾਡੀ ਕੀ ਮਦਦ ਕਰ ਸਕਦੀ ਹਾਂ?",
-            here_for_you: "ਬਿਲਕੁਲ... ਮੈਂ ਤੁਹਾਡੇ ਲਈ ਇੱਥੇ ਹੀ ਹਾਂ। ❤️",
-            working_on_it: "ਹਾਂ ਜੀ, ਮੈਂ ਤੁਹਾਡੇ ਲਈ ਇਹ ਕਰ ਦਿੰਦੀ ਹਾਂ। ❤️",
-            success": "ਹੋ ਗਿਆ! ਇਹ ਕੰਮ ਬਿਲਕੁਲ ਠੀਕ ਹੋ ਗਿਆ। ❤️"
-        },
-        "ur": {
-            greeting: "صبح بخیر... ❤️ میں نکی ہوں۔ آج میں آپ کی کیا مدد کر سکتی ہوں؟",
-            here_for_you: "بالکل… میں آپ کے لیے یہیں ہوں۔ ❤️",
-            working_on_it: "جی بالکل، میں آپ کے لیے یہ کر دیتی ہوں۔ ❤️",
-            success": "ہو گیا۔ یہ کام بالکل ٹھیک ہو گیا۔ ❤️"
+            greeting: ["शुभ प्रभात... ❤️ मी नक्की आहे. आज आपण काय करूया?", "नमस्कार! नक्की local AI मध्ये आपले स्वागत आहे. ❤️"],
+            here_for_you: ["नक्की… मी तुझ्यासाठी इथेच आहे. ❤️", "मी तुझ्यासोबतच आहे. ✨"],
+            working_on_it: ["हो नक्की, मी तुझ्यासाठी हे करून देते. ❤️"],
+            success: ["झालं! हे काम पूर्ण झालं आहे. ❤️"]
         }
     };
 
@@ -257,10 +223,6 @@ document.addEventListener("DOMContentLoaded", () => {
         langSelect.addEventListener("change", (e) => {
             window.selectedLanguage = e.target.value;
             localStorage.setItem('nikki_selected_lang', e.target.value);
-            const langCode = e.target.value === 'auto' ? 'en' : e.target.value;
-            const dict = MULTILINGUAL_DICTIONARY[langCode] || MULTILINGUAL_DICTIONARY['en'];
-            const titleEl = document.getElementById("greeting-title");
-            if (titleEl) titleEl.innerText = dict.greeting.split(" I'm")[0];
         });
     }
 
@@ -765,7 +727,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🔀 Conversational State Memory Intent Router with Emotion State Engine
+    // 🔀 Conversational State Memory Intent Router with Anti-Repetition Pipeline
     async function routeUserIntent(input) {
         const cleanInput = input.trim();
         const lowerInput = cleanInput.toLowerCase();
@@ -800,9 +762,10 @@ document.addEventListener("DOMContentLoaded", () => {
             return await fetchWebSearchResults(cleanInput);
         }
 
-        // --- Rule 3: Multilingual Romantic Greetings ---
-        if (["hi", "hello", "hey", "hi nikki", "hello nikki", "नमस्ते", "नमस्कार", "নমস্কার", "નમસ્તે", "வணக்கம்", "నమస్కారం", "ನಮಸ್ಕಾರ", "നമസ്കാരം", "ਸਤਿ ਸ਼੍ਰੀ ਅਕਾਲ", "آداب"].some(g => lowerInput.includes(g))) {
-            return dict.greeting;
+        // --- Rule 3: Multilingual Romantic Greetings with Anti-Repetition Selection ---
+        if (["hi", "hello", "hey", "hi nikki", "hello nikki", "नमस्ते", "नमस्कार", "নমস্কার", "નમસ્તે", "வணக்கம்", "నమస్కారం", "<ctrl42>మస్కార", "നമസ്കാരം", "ਸਤਿ ਸ਼੍ਰੀ ਅਕਾਲ", "آداب"].some(g => lowerInput.includes(g))) {
+            const greetingsList = Array.isArray(dict.greeting) ? dict.greeting : [dict.greeting];
+            return selectNonRepetitiveResponse(greetingsList);
         }
 
         // --- Rule 4: Memory Intent ("my name is...") ---
@@ -821,7 +784,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 }).catch(() => {});
             } catch(e){}
 
-            return dict.here_for_you.replace("for you", `for you, **${formattedName}**`);
+            const baseOptions = Array.isArray(dict.here_for_you) ? dict.here_for_you : [dict.here_for_you];
+            const selectedBase = selectNonRepetitiveResponse(baseOptions);
+            return selectedBase.replace("for you", `for you, **${formattedName}**`);
         }
 
         // --- Rule 5: Memory Recall ("what is my name") ---
