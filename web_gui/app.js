@@ -7,18 +7,43 @@ document.addEventListener("DOMContentLoaded", () => {
     const chatScroll = document.getElementById("chat-scroll");
     const contMicPill = document.getElementById("cont-mic-pill");
     const statusText = document.getElementById("status-text");
+    const themeSelect = document.getElementById("theme-select");
+    const telemetryCpu = document.getElementById("telemetry-cpu");
+    const telemetryRam = document.getElementById("telemetry-ram");
 
     // Continuous Microphone State
     let isContinuousMicOn = true;
     let isSpeaking = false;
-    let currentState = "IDLE"; // IDLE, LISTENING, THINKING, SPEAKING
+    let currentState = "IDLE";
 
     // Speech Recognition & Synthesis
     const synth = window.speechSynthesis;
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
 
-    // Canvas Visualizer setup
+    // Theme Switcher Handler
+    if (themeSelect) {
+        themeSelect.addEventListener("change", (e) => {
+            document.body.className = "";
+            if (e.target.value !== "default") {
+                document.body.classList.add(`theme-${e.target.value}`);
+            }
+        });
+    }
+
+    // Telemetry Polling
+    function updateTelemetry() {
+        fetch("/api/telemetry")
+            .then(res => res.json())
+            .then(data => {
+                if (telemetryCpu) telemetryCpu.innerText = `CPU: ${data.cpu}`;
+                if (telemetryRam) telemetryRam.innerText = `RAM: ${data.ram}`;
+            })
+            .catch(() => {});
+    }
+    setInterval(updateTelemetry, 4000);
+
+    // Canvas Visualizer Setup
     const canvas = document.getElementById("dynamic-canvas");
     let ctx = null;
     if (canvas) {
@@ -35,7 +60,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Dynamic Canvas Particle & Wave Audio Spectrum
+    // Dynamic Particles Setup
     let particles = [];
     for (let i = 0; i < 40; i++) {
         particles.push({
@@ -53,7 +78,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!ctx) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Render ambient floating particles
         particles.forEach(p => {
             p.x += p.vx * (currentState === "THINKING" ? 2.5 : 1);
             p.y += p.vy * (currentState === "THINKING" ? 2.5 : 1);
@@ -71,7 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
             ctx.fill();
         });
 
-        // Render dynamic sine waves at bottom when Listening/Speaking
         if (currentState === "LISTENING" || currentState === "SPEAKING") {
             phase += 0.05;
             ctx.beginPath();
@@ -143,9 +166,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (recognition && !isSpeaking) {
             try {
                 recognition.start();
-            } catch (e) {
-                // Ignore if already active
-            }
+            } catch (e) {}
         }
     }
 
@@ -165,7 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Auto-start microphone on page load
     setTimeout(() => {
         if (isContinuousMicOn) startListening();
     }, 1000);
@@ -208,25 +228,38 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(data => {
             removeMessage(thinkingId);
             const responseText = data.response || "Task processed by Nikki.";
-            appendMessage("assistant", responseText);
+            const suggestions = data.suggestions || [];
+            appendMessage("assistant", responseText, suggestions);
             speakOutLoud(responseText);
         })
         .catch(err => {
             removeMessage(thinkingId);
             const fallbackText = `Nikki processed your request: "${promptText}". Running local engine.`;
-            appendMessage("assistant", fallbackText);
+            appendMessage("assistant", fallbackText, ["Audit system security", "Teach another personal fact"]);
             speakOutLoud(fallbackText);
         });
     }
 
-    function appendMessage(sender, text) {
+    function appendMessage(sender, text, suggestions = []) {
         const row = document.createElement("div");
         row.classList.add("msg-row", sender);
 
         if (sender === "assistant") {
+            let suggestionsHtml = "";
+            if (suggestions && suggestions.length > 0) {
+                suggestionsHtml = `
+                    <div class="followup-container">
+                        ${suggestions.map(s => `<button class="followup-chip" onclick="sendQuickPrompt('${s.replace(/'/g, "\\'")}')">⚡ ${s}</button>`).join('')}
+                    </div>
+                `;
+            }
+
             row.innerHTML = `
                 <div class="msg-avatar sparkle-avatar">✦</div>
-                <div class="msg-content">${formatMarkdown(text)}</div>
+                <div class="msg-content">
+                    ${formatMarkdown(text)}
+                    ${suggestionsHtml}
+                </div>
             `;
         } else {
             row.innerHTML = `

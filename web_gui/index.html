@@ -21,9 +21,26 @@
             <span class="model-badge">3.6 Pro Local</span>
         </div>
         <div class="header-right">
+            <!-- Telemetry Pill -->
+            <div class="telemetry-pill">
+                <span id="telemetry-cpu">CPU: 8%</span>
+                <span>|</span>
+                <span id="telemetry-ram">RAM: 38%</span>
+            </div>
+
+            <!-- Theme Switcher -->
+            <select id="theme-select" class="theme-selector">
+                <option value="default">Gemini Midnight</option>
+                <option value="cyberpunk">Cyberpunk Neon</option>
+                <option value="matrix">Emerald Matrix</option>
+                <option value="aura">Aura Sunset</option>
+            </select>
+
+            <!-- Continuous Mic Toggle Pill -->
             <div class="cont-mic-pill" id="cont-mic-pill">
                 <span>🎙️ Continuous Mic: ON</span>
             </div>
+
             <div class="status-tag">
                 <span class="status-dot"></span>
                 <span id="status-text">100% Private & Active 24/7</span>
