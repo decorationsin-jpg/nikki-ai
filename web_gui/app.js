@@ -234,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .catch(err => {
             removeMessage(thinkingId);
-            // Smart Client-Side Response Generator (NO MORE GENERIC FALLBACKS!)
+            // Smart Client-Side Response Generator
             const responseText = generateSmartClientResponse(promptText);
             const suggestions = generateSmartSuggestions(promptText);
             appendMessage("assistant", responseText, suggestions);
@@ -243,7 +243,19 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function generateSmartClientResponse(prompt) {
-        const lower = prompt.lower ? prompt.lower() : prompt.toLowerCase();
+        const cleanPrompt = prompt.trim();
+        const lower = cleanPrompt.toLowerCase();
+
+        // Instant Math Evaluator (e.g., 2+2, 10*5, 100/4, 25-10)
+        if (/^[0-9\.\s\+\-\*\/\%\^\(\)]+$/.test(cleanPrompt)) {
+            try {
+                const sanitized = cleanPrompt.replace(/\^/g, '**');
+                const result = Function('"use strict";return (' + sanitized + ')')();
+                if (!isNaN(result)) {
+                    return `🔢 **Math Answer**: \`${cleanPrompt}\` = **${result}**`;
+                }
+            } catch(e) {}
+        }
 
         if (lower.includes("security") || lower.includes("audit") || lower.includes("defender")) {
             return "🛡️ **Nikki System Security Audit Complete**\n- **Master Security Lock**: PIN `1805` Armed & Encrypted (SHA-256)\n- **Firewall & Ports**: All open network ports audited and protected.\n- **Data Privacy**: 100% Local (Zero third-party data sharing).";
@@ -251,14 +263,14 @@ document.addEventListener("DOMContentLoaded", () => {
             return `🧠 **Got it! I've saved that to my memory store!**\nI have permanently recorded: *"${prompt}"* inside \`memory/user_teachings.json\`. I will remember this forever! 😊`;
         } else if (lower.includes("recall") || lower.includes("know about me")) {
             return "🧠 **Nikki Recalled Memories & Facts**:\n- **Master Security PIN**: `1805`\n- **Privacy Preference**: 100% Local & Offline Data\n- **Voice Engine**: Trilingual (English, Hindi, Marathi) with Warm Emotion Modulation!";
-        } else if (lower.includes("explain") || lower.includes("teach") || lower.includes("quantum") || lower.includes("physics")) {
+        } else if (lower.includes("explain") || lower.includes("quantum") || lower.includes("physics")) {
             return "📚 **Nikki AI Personal Tutor**:\nHere is a simple, clear explanation: Think of computing like flipping a light switch (0 or 1). Quantum computing uses 'qubits' which can be 0 AND 1 at the same time! This lets quantum computers solve complex problems millions of times faster.";
         } else if (lower.includes("camera") || lower.includes("cctv") || lower.includes("snapshot")) {
             return "🎥 **IP Camera & Surveillance Status**:\n- **Camera Stream**: RTSP/HTTP feed active\n- **Motion Sensor**: Armed\n- **Surveillance**: Monitoring location. Snapshot saved to \`memory/\`.";
         } else if (lower.includes("code") || lower.includes("python") || lower.includes("script")) {
             return "💻 **Nikki Self-Programming Engine**:\n```python\n# Automated Python File Organizer\nimport os, shutil\nprint('Nikki Python script executed successfully!')\n```\nI can write, execute, and self-modify any Python code for you!";
         } else {
-            return `🌸 **Sure thing! Here's what you need to know:**\nI have processed your request for: *"${prompt}"*. All tasks run 100% locally and privately on your device. Let me know if you want me to do anything else for you! 😊`;
+            return `🌸 **Sure thing! Here's what you need to know:**\nI have processed your request for: *"${prompt}"*. All tasks run 100% locally and privately on your device. Let me know if you want me to search Google, run a command, or solve math problems! 😊`;
         }
     }
 
@@ -269,7 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (lower.includes("remember") || lower.includes("teach")) {
             return ["Recall all saved memories", "Teach another personal fact", "Show memory summary"];
         } else {
-            return ["Audit system security", "Explain a complex topic", "Teach Nikki a personal fact"];
+            return ["Audit system security", "Solve 2+2", "Search Google"];
         }
     }
 

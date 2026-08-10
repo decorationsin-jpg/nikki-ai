@@ -59,20 +59,25 @@ class BasicQAEngine:
         return None
 
     def _evaluate_math(self, query: str) -> Optional[float]:
-        """Evaluates basic math expressions safely."""
+        """Evaluates basic math expressions safely (e.g. 2+2, 10*5, 100/4, 25-10)."""
         try:
-            # Extract basic arithmetic pattern
+            # Extract arithmetic expressions from query (e.g. "what is 2+2", "calculate 10*5")
             match = re.search(r'(\d+\.?\d*)\s*([\+\-\*/%])\s*(\d+\.?\d*)', query)
             if match:
                 num1 = float(match.group(1))
                 op = match.group(2)
                 num2 = float(match.group(3))
 
-                if op == '+': return num1 + num2
-                elif op == '-': return num1 - num2
-                elif op == '*': return num1 * num2
-                elif op == '/': return round(num1 / num2, 4) if num2 != 0 else None
-                elif op == '%': return num1 % num2
+                if op == '+': res = num1 + num2
+                elif op == '-': res = num1 - num2
+                elif op == '*': res = num1 * num2
+                elif op == '/': res = num1 / num2 if num2 != 0 else None
+                elif op == '%': res = num1 % num2
+                else: res = None
+
+                if res is not None:
+                    # Return integer if whole number
+                    return int(res) if res.is_integer() else round(res, 4)
         except Exception:
             pass
         return None
