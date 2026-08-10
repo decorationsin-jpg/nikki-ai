@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", () => {
             newMood = "CURIOUS";
             icon = "🤔";
             window.NIKKI_EMOTION.confidence = 0.95;
-        } else if (lower.includes("love you") || lower.includes("miss you") || lower.includes("nikki") || lower.includes("hi")) {
+        } else if (lower.includes("love you") || lower.includes("miss you") || lower.includes("obsy") || lower.includes("hi")) {
             newMood = "AFFECTIONATE";
             icon = "💗";
             window.NIKKI_EMOTION.affection = 0.90;
@@ -95,6 +95,16 @@ document.addEventListener("DOMContentLoaded", () => {
         if (emotionMoodIcon) emotionMoodIcon.innerText = icon;
         if (emotionMoodText) emotionMoodText.innerText = `Mood: ${newMood}`;
         return newMood;
+    }
+
+    function updateThoughtStep(stepIndex) {
+        const thoughtBar = document.getElementById("obsy-thought-bar");
+        if (!thoughtBar) return;
+        const steps = thoughtBar.querySelectorAll(".step");
+        steps.forEach((s, idx) => {
+            if (idx === stepIndex) s.classList.add("active");
+            else s.classList.remove("active");
+        });
     }
 
     function selectNonRepetitiveResponse(options) {
@@ -177,20 +187,20 @@ document.addEventListener("DOMContentLoaded", () => {
     // 🌐 11-Language Multilingual Dictionary & Locale Map
     const MULTILINGUAL_DICTIONARY = {
         "en": {
-            greeting: ["Good morning... ❤️ I'm NIKKI. What would you like to do today?", "Morning... I'm right here for you. ❤️", "Good morning! Ready whenever you are. 😊"],
-            here_for_you: ["Of course, I'm here for you. ❤️", "I'm right here... tell me what you need. ❤️", "Always here for you. ✨"],
-            working_on_it: ["Sure! Let me take care of that for you. ❤️", "All set! I've taken care of that. 😊", "Finished! Everything is done. ✨"],
+            greeting: ["Good morning, Swapnil. ❤️ OBSY AI is ready.", "Morning... OBSY is right here for you. ❤️", "Good morning! Ready whenever you are. 😊"],
+            here_for_you: ["Of course, OBSY is here for you. ❤️", "I'm right here... tell me what you need. ❤️", "Always here for you. ✨"],
+            working_on_it: ["Sure! OBSY will take care of that for you. ❤️", "All set! Taken care of. 😊", "Finished! Everything is done. ✨"],
             success: ["Done! That worked perfectly. I'm happy I could help. ❤️", "Finished cleanly! Ready for your next task. ✨"]
         },
         "hi": {
-            greeting: ["नमस्ते... ❤️ मैं निक्की हूँ। आज मैं आपकी क्या मदद कर सकती हूँ?", "सुप्रभात... मैं आपके साथ हूँ। ❤️"],
-            here_for_you: ["बिल्कुल… मैं यहीं हूँ आपके लिए। ❤️", "मैं हमेशा आपके साथ हूँ। ✨"],
-            working_on_it: ["जी बिल्कुल, मैं आपके लिए यह कर देती हूँ। ❤️"],
+            greeting: ["नमस्ते... ❤️ मैं OBSY AI हूँ। आज मैं आपकी क्या मदद कर सकती हूँ?", "सुप्रभात... ऑब्सी AI आपके साथ है। ❤️"],
+            here_for_you: ["बिल्कुल… ऑब्सी यहीं है आपके लिए। ❤️", "मैं हमेशा आपके साथ हूँ। ✨"],
+            working_on_it: ["जी बिल्कुल, ऑब्सी आपके लिए यह कर देती है। ❤️"],
             success: ["हो गया! यह काम एकदम सही हुआ। ❤️"]
         },
         "mr": {
-            greeting: ["शुभ प्रभात... ❤️ मी नक्की आहे. आज आपण काय करूया?", "नमस्कार! नक्की local AI मध्ये आपले स्वागत आहे. ❤️"],
-            here_for_you: ["नक्की… मी तुझ्यासाठी इथेच आहे. ❤️", "मी तुझ्यासोबतच आहे. ✨"],
+            greeting: ["शुभ प्रभात, Swapnil... ❤️ मी OBSY AI आहे. आज आपण काय करूया?", "नमस्कार! OBSY local AI मध्ये आपले स्वागत आहे. ❤️"],
+            here_for_you: ["नक्की… OBSY तुझ्यासाठी इथेच आहे. ❤️", "मी तुझ्यासोबतच आहे. ✨"],
             working_on_it: ["हो नक्की, मी तुझ्यासाठी हे करून देते. ❤️"],
             success: ["झालं! हे काम पूर्ण झालं आहे. ❤️"]
         }
@@ -200,7 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
     window.nikkiMemory = {
         userName: localStorage.getItem('nikki_user_name') || null,
         chatHistory: [
-            { role: "system", content: "You are Nikki 3.6 Pro, a helpful, friendly local AI assistant running directly inside the user's browser GPU." }
+            { role: "system", content: "You are OBSY AI Pro, a helpful, friendly 100% local AI platform running directly inside the user's browser GPU." }
         ]
     };
     window.adminOverrides = JSON.parse(localStorage.getItem('nikki_admin_overrides') || '[]');
@@ -316,7 +326,7 @@ document.addEventListener("DOMContentLoaded", () => {
             adminTriggerInput.value = "";
             adminResponseInput.value = "";
             renderAdminOverrides();
-            alert("✅ Corrected Response Rule saved! Nikki will return this response for matching queries next time.");
+            alert("✅ Corrected Response Rule saved! OBSY will return this response for matching queries next time.");
         });
     }
 
@@ -457,7 +467,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `nikki-chat-history-${Date.now()}.md`;
+            a.download = `obsy-chat-history-${Date.now()}.md`;
             a.click();
             URL.revokeObjectURL(url);
         });
@@ -628,9 +638,9 @@ document.addEventListener("DOMContentLoaded", () => {
         const textToTranslate = window.lastResponseText || "Hello! How can I help you today?";
         let translatedText = "";
         if (targetLang === "marathi") {
-            translatedText = `🌐 **Marathi Translation (मराठी अनुवाद)**:\n\n"नमस्कार! नक्की local AI मध्ये आपले स्वागत आहे. मी तुम्हाला कशी मदत करू शकते?"`;
+            translatedText = `🌐 **Marathi Translation (मराठी अनुवाद)**:\n\n"नमस्कार! OBSY AI local platform मध्ये आपले स्वागत आहे. मी तुम्हाला कशी मदत करू शकते?"`;
         } else {
-            translatedText = `🌐 **Hindi Translation (हिंदी अनुवाद)**:\n\n"नमस्ते! निक्की AI में आपका स्वागत है। मैं आपकी क्या सहायता कर सकती हूँ?"`;
+            translatedText = `🌐 **Hindi Translation (हिंदी अनुवाद)**:\n\n"नमस्ते! ऑब्सी AI में आपका स्वागत है। मैं आपकी क्या सहायता कर सकती हूँ?"`;
         }
         appendMessage("assistant", translatedText, []);
         speakOutLoud(translatedText);
@@ -673,7 +683,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const lower = text.toLowerCase();
         if (lower.includes("namaste") || lower.includes("kya") || lower.includes("batao")) return "hi";
-        if (lower.includes("karto") || lower.includes("udya") || lower.includes("tujhyasathi") || lower.includes("nakki")) return "mr";
+        if (lower.includes("karto") || lower.includes("udya") || lower.includes("tujhyasathi") || lower.includes("obsy")) return "mr";
 
         return "en";
     }
@@ -727,20 +737,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🔀 Conversational State Memory Intent Router with Anti-Repetition Pipeline
+    // 🔀 Conversational State Memory Intent Router with OBSY Thought Indicator
     async function routeUserIntent(input) {
         const cleanInput = input.trim();
         const lowerInput = cleanInput.toLowerCase();
         const detectedLang = detectInputLanguage(cleanInput);
         const dict = MULTILINGUAL_DICTIONARY[detectedLang] || MULTILINGUAL_DICTIONARY['en'];
 
-        // ❤️ Update Emotion Engine State from context
+        // Update OBSY Thought Indicator & Emotion State
+        updateThoughtStep(1); // Understanding
         updateEmotionState(cleanInput);
 
         // 🌟 PRIORITY 0: Check Admin Response Correction Overrides
         if (window.adminOverrides && window.adminOverrides.length > 0) {
             for (const rule of window.adminOverrides) {
                 if (lowerInput.includes(rule.trigger) || rule.trigger.includes(lowerInput)) {
+                    updateThoughtStep(3); // Done
                     return `⚙️ **Admin Corrected Response**:\n\n${rule.response}\n\n📌 *Set by Admin for next time*`;
                 }
             }
@@ -748,10 +760,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- Rule 1: Dynamic Help & Capability Intent ---
         if (lowerInput.includes("how can you help") || lowerInput.includes("what can you do") || lowerInput === "help" || lowerInput === "capabilities") {
-            return `🤖 **Here is what I can do for you (11 Languages Supported):**\n\n` +
+            updateThoughtStep(3); // Done
+            return `🤖 **Here is what OBSY AI can do for you (11 Languages Supported):**\n\n` +
                    `• 🧮 **Calculations:** Type math expressions (e.g., \`45 * 12\`, \`15% of 200\`, \`2 into 2\`).\n` +
                    `• 🧠 **Memory:** Tell me facts like *"my name is Swapnil"* or *"my favorite language is JS"*.\n` +
                    `• 📖 **Information & Search:** Ask for topics in any language (e.g., *"I want information about Dr Babasaheb Ambedkar"*).\n` +
+                   `• 🤖 **Sub-Agents:** OBSY automatically routes prompts to Research, Coding, File, and RAG agents.\n` +
                    `• 🌐 **Multilingual Code-Switching:** Talk naturally in English, Hindi, Marathi, Bengali, Gujarati, Tamil, Telugu, Kannada, Malayalam, Punjabi, or Urdu!\n` +
                    `• ⚙️ **Admin Control:** Click Admin Panel (PIN: \`1805\`) to correct responses for next time.\n` +
                    `• 🔒 **Local Privacy:** All interactions run 100% privately directly in your browser GPU!`;
@@ -759,11 +773,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- Rule 2: Information & Search Intent ---
         if (lowerInput.includes("information about") || lowerInput.startsWith("who is") || lowerInput.startsWith("what is") || lowerInput.startsWith("tell me about") || lowerInput.startsWith("search")) {
-            return await fetchWebSearchResults(cleanInput);
+            updateThoughtStep(2); // Searching
+            const res = await fetchWebSearchResults(cleanInput);
+            updateThoughtStep(3); // Done
+            return res;
         }
 
         // --- Rule 3: Multilingual Romantic Greetings with Anti-Repetition Selection ---
-        if (["hi", "hello", "hey", "hi nikki", "hello nikki", "नमस्ते", "नमस्कार", "নমস্কার", "નમસ્તે", "வணக்கம்", "నమస్కారం", "<ctrl42>మస్కార", "നമസ്കാരം", "ਸਤਿ ਸ਼੍ਰੀ ਅਕਾਲ", "آداب"].some(g => lowerInput.includes(g))) {
+        if (["hi", "hello", "hey", "hi obsy", "hello obsy", "hi nikki", "hello nikki", "नमस्ते", "नमस्कार", "নমস্কার", "નમસ્તે", "வணக்கம்", "నమస్కారం", "ನಮಸ್ಕಾರ", "നമസ്കാരം", "ਸਤਿ ਸ਼੍ਰੀ ਅਕਾਲ", "آداب"].some(g => lowerInput.includes(g))) {
+            updateThoughtStep(3); // Done
             const greetingsList = Array.isArray(dict.greeting) ? dict.greeting : [dict.greeting];
             return selectNonRepetitiveResponse(greetingsList);
         }
@@ -780,10 +798,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 fetch("/api/task", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ goal: `Teach Nikki a personal fact: User name is ${formattedName}` })
+                    body: JSON.stringify({ goal: `Teach OBSY a personal fact: User name is ${formattedName}` })
                 }).catch(() => {});
             } catch(e){}
 
+            updateThoughtStep(3); // Done
             const baseOptions = Array.isArray(dict.here_for_you) ? dict.here_for_you : [dict.here_for_you];
             const selectedBase = selectNonRepetitiveResponse(baseOptions);
             return selectedBase.replace("for you", `for you, **${formattedName}**`);
@@ -791,6 +810,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- Rule 5: Memory Recall ("what is my name") ---
         if (lowerInput.includes("what is my name") || lowerInput.includes("who am i") || lowerInput.includes("do you know my name") || lowerInput.includes("मेरा नाम क्या है") || lowerInput.includes("माझे नाव काय आहे")) {
+            updateThoughtStep(3); // Done
             if (window.nikkiMemory.userName) {
                 return `Your name is **${window.nikkiMemory.userName}**! ✨`;
             } else {
@@ -800,7 +820,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- Rule 6: Self-Identity ---
         if (lowerInput.includes("what is your name") || lowerInput.includes("who are you") || lowerInput.includes("तुम्हारा नाम क्या है") || lowerInput.includes("तुझे नाव काय आहे")) {
-            return `I am **Nikki 3.6 Pro**, your autonomous 11-language local AI companion! 🤖✨`;
+            updateThoughtStep(3); // Done
+            return `I am **OBSY AI ✦**, your private 100% local AI intelligence platform! 🤖✨`;
         }
 
         // --- Rule 7: Fast Math Expressions ---
@@ -809,6 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const sanitized = cleanInput.replace(/\^/g, '**');
                 const result = Function('"use strict";return (' + sanitized + ')')();
                 if (typeof result === 'number' && !isNaN(result)) {
+                    updateThoughtStep(3); // Done
                     return renderMathResultCard(cleanInput, result);
                 }
             } catch(e) {}
@@ -816,6 +838,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const mathEval = tryEvaluateMath(cleanInput);
         if (mathEval) {
+            updateThoughtStep(3); // Done
             return renderMathResultCard(mathEval.cleanExpr, mathEval.result);
         }
 
@@ -824,18 +847,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (engine) {
             try {
+                updateThoughtStep(2); // Searching/Evaluating
                 const completion = await engine.chat.completions.create({
                     messages: window.nikkiMemory.chatHistory.slice(-10),
                     temperature: 0.7
                 });
                 const botResponse = completion.choices[0].message.content;
                 window.nikkiMemory.chatHistory.push({ role: "assistant", content: botResponse });
+                updateThoughtStep(3); // Done
                 return botResponse;
             } catch (err) {}
         }
 
         // --- Rule 9: General Knowledge Search Fallback ---
-        return await fetchWebSearchResults(cleanInput);
+        updateThoughtStep(2);
+        const searchRes = await fetchWebSearchResults(cleanInput);
+        updateThoughtStep(3);
+        return searchRes;
     }
 
     function handleUserSubmit(promptText) {
@@ -848,7 +876,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.lastSubmitTime = Date.now();
 
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "🤖 WebGPU LLM Reasoning...";
+        if (statusText) statusText.innerText = "🤖 OBSY AI Reasoning...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -1092,7 +1120,7 @@ document.addEventListener("DOMContentLoaded", () => {
         row.classList.add("msg-row", "assistant");
         row.innerHTML = `
             <div class="msg-avatar">🤖</div>
-            <div class="msg-content"><p><em>Nikki evaluating query...</em></p></div>
+            <div class="msg-content"><p><em>OBSY AI evaluating query...</em></p></div>
         `;
         messagesList.appendChild(row);
         chatScroll.scrollTop = chatScroll.scrollHeight;
@@ -1110,7 +1138,7 @@ document.addEventListener("DOMContentLoaded", () => {
             isSpeaking = true;
             try { if (recognition) recognition.stop(); } catch(e){}
             currentState = "SPEAKING";
-            if (statusText) statusText.innerText = "🔊 Nikki Speaking...";
+            if (statusText) statusText.innerText = "🔊 OBSY Speaking...";
 
             const mood = window.NIKKI_EMOTION.mood || 'AFFECTIONATE';
             const cleanText = text.replace(/[*#`]/g, "").slice(0, 250);
