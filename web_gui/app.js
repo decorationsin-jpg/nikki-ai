@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const themeSelect = document.getElementById("theme-select");
     const telemetryCpu = document.getElementById("telemetry-cpu");
     const telemetryRam = document.getElementById("telemetry-ram");
+    const exportChatBtn = document.getElementById("export-chat-btn");
 
     // Memory Management Modal Elements
     const memoryBtn = document.getElementById("memory-btn");
@@ -17,134 +18,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeMemoryModal = document.getElementById("close-memory-modal");
     const memoryItemsList = document.getElementById("memory-items-list");
 
-    // Global Math State Memory
+    // Global Math & Memory State
     window.lastCalculatedResult = null;
-    window.lastCalculatedExpr = null;
+    window.chatHistory = [];
 
-    // 🎙️ Continuous Microphone & Speech State
-    let micEnabled = false; // Toggle state for continuous mic
+    // 🎙️ Voice & VAD Controls
+    let micEnabled = false;
     let isSpeaking = false;
     let currentState = "IDLE";
     let lastProcessedPrompt = "";
     let silenceTimer = null;
 
-    // Speech Recognition & Synthesis Setup
+    // Speech Recognition & Synthesis
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const synth = window.speechSynthesis;
     let recognition = null;
 
-    if (SpeechRecognition) {
-        recognition = new SpeechRecognition();
-        recognition.continuous = true;      // Keeps microphone stream active continuously
-        recognition.interimResults = true;  // Displays transcript live while speaking
-        recognition.lang = 'en-US';
-
-        recognition.onstart = () => {
-            if (isSpeaking) {
-                try { recognition.stop(); } catch(e){}
-                return;
-            }
-            currentState = "LISTENING";
-            if (micBtn) micBtn.classList.add("listening");
-            if (statusText) statusText.innerText = "🎙️ Continuous Mic Active...";
-        };
-
-        // Live interim transcript & auto-submit after 1.5s silence
-        recognition.onresult = (event) => {
-            if (isSpeaking || !micEnabled) return;
-
-            let interimTranscript = '';
-            let finalTranscript = '';
-
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
-                }
-            }
-
-            // Update live input field
-            if (userInput) {
-                userInput.value = finalTranscript || interimTranscript;
-            }
-
-            // Auto-submit 1.5 seconds after user finishes speaking final transcript
-            const cleanFinal = finalTranscript.trim();
-            if (cleanFinal.length > 0 && cleanFinal !== lastProcessedPrompt) {
-                clearTimeout(silenceTimer);
-                silenceTimer = setTimeout(() => {
-                    handleUserSubmit(cleanFinal);
-                    userInput.value = '';
-                }, 1500);
-            }
-        };
-
-        // Auto-restart stream on end if continuous mic is enabled
-        recognition.onend = () => {
-            if (micBtn) micBtn.classList.remove("listening");
-            if (micEnabled && !isSpeaking) {
-                try { recognition.start(); } catch (e) {}
-            } else {
-                currentState = "IDLE";
-                if (statusText) statusText.innerText = "100% Private & Local";
-            }
-        };
-
-        recognition.onerror = (event) => {
-            if (event.error !== 'no-speech' && event.error !== 'aborted') {
-                currentState = "IDLE";
-                if (micBtn) micBtn.classList.remove("listening");
-            }
-        };
-    }
-
-    function startContinuousMic() {
-        if (recognition && micEnabled && !isSpeaking) {
-            try {
-                recognition.start();
-                updateMicUI(true);
-            } catch (e) {}
-        }
-    }
-
-    function stopContinuousMic() {
-        if (recognition) {
-            try {
-                recognition.stop();
-                updateMicUI(false);
-            } catch (e) {}
-        }
-    }
-
-    function toggleMicState() {
-        micEnabled = !micEnabled;
-        if (micEnabled) {
-            startContinuousMic();
-        } else {
-            stopContinuousMic();
-        }
-    }
-
-    function updateMicUI(isActive) {
-        if (contMicPill) {
-            contMicPill.innerHTML = isActive ? `<span>🎙️ Continuous Mic: ON</span>` : `<span>🔇 Mic: OFF</span>`;
-            if (isActive) contMicPill.classList.remove("off");
-            else contMicPill.classList.add("off");
-        }
-    }
-
-    if (contMicPill) {
-        contMicPill.addEventListener("click", () => {
-            toggleMicState();
-        });
-    }
-
-    if (micBtn) {
-        micBtn.addEventListener("click", () => {
-            toggleMicState();
-        });
-    }
+    // Restore Chat Session from localStorage
+    restoreChatSession();
 
     // Theme Switcher Handler
     if (themeSelect) {
@@ -237,6 +128,102 @@ document.addEventListener("DOMContentLoaded", () => {
         requestAnimationFrame(drawDynamicVisualizer);
     }
 
+    // 📥 Export Chat History (Markdown / JSON)
+    if (exportChatBtn) {
+        exportChatBtn.addEventListener("click", () => {
+            const transcript = window.chatHistory.map(m => `**${m.sender.toUpperCase()}**: ${m.text}`).join('\n\n');
+            const blob = new Blob([transcript], { type: 'text/markdown' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `nikki-chat-history-${Date.now()}.md`;
+            a.click();
+            URL.revokeObjectURL(url);
+        });
+    }
+
+    // Speech Recognition Setup
+    if (SpeechRecognition) {
+        recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onstart = () => {
+            if (isSpeaking) {
+                try { recognition.stop(); } catch(e){}
+                return;
+            }
+            currentState = "LISTENING";
+            if (micBtn) micBtn.classList.add("listening");
+            if (statusText) statusText.innerText = "🎙️ Continuous Mic Active...";
+        };
+
+        recognition.onresult = (event) => {
+            if (isSpeaking || !micEnabled) return;
+
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+
+            if (userInput) {
+                userInput.value = finalTranscript || interimTranscript;
+            }
+
+            const cleanFinal = finalTranscript.trim();
+            if (cleanFinal.length > 0 && cleanFinal !== lastProcessedPrompt) {
+                clearTimeout(silenceTimer);
+                silenceTimer = setTimeout(() => {
+                    handleUserSubmit(cleanFinal);
+                    userInput.value = '';
+                }, 1500);
+            }
+        };
+
+        recognition.onend = () => {
+            if (micBtn) micBtn.classList.remove("listening");
+            if (micEnabled && !isSpeaking) {
+                try { recognition.start(); } catch (e) {}
+            } else {
+                currentState = "IDLE";
+                if (statusText) statusText.innerText = "100% Private & Local";
+            }
+        };
+    }
+
+    function toggleMicState() {
+        micEnabled = !micEnabled;
+        if (micEnabled) {
+            try { recognition.start(); } catch(e){}
+            updateMicUI(true);
+        } else {
+            try { recognition.stop(); } catch(e){}
+            updateMicUI(false);
+        }
+    }
+
+    function updateMicUI(isActive) {
+        if (contMicPill) {
+            contMicPill.innerHTML = isActive ? `<span>🎙️ Continuous Mic: ON</span>` : `<span>🔇 Mic: OFF</span>`;
+            if (isActive) contMicPill.classList.remove("off");
+            else contMicPill.classList.add("off");
+        }
+    }
+
+    if (contMicPill) {
+        contMicPill.addEventListener("click", toggleMicState);
+    }
+    if (micBtn) {
+        micBtn.addEventListener("click", toggleMicState);
+    }
+
     // Memory Management Modal Control
     if (memoryBtn) {
         memoryBtn.addEventListener("click", () => {
@@ -303,13 +290,11 @@ document.addEventListener("DOMContentLoaded", () => {
         handleUserSubmit(promptText);
     };
 
-    // 🧮 Direct Quick Math Handler for State Memory Chips (e.g. handleQuickMath('9 * 2'))
     window.handleQuickMath = function(expression) {
         try {
             const sanitized = expression.replace(/\^/g, '**');
             const result = Function('"use strict";return (' + sanitized + ')')();
             window.lastCalculatedResult = result;
-            window.lastCalculatedExpr = expression;
 
             appendMessage("user", expression);
             const mathHtml = renderMathResultCard(expression, result);
@@ -320,9 +305,47 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // 🔀 Autonomous Intent Router
+    async function routeUserIntent(input) {
+        const cleanInput = input.trim();
+        const lower = cleanInput.toLowerCase();
+
+        // 1. Pure Arithmetic Check
+        if (/^[0-9\s\+\-\*\/\(\)\.\^]+$/.test(cleanInput)) {
+            try {
+                const sanitized = cleanInput.replace(/\^/g, '**');
+                const result = Function('"use strict";return (' + sanitized + ')')();
+                if (typeof result === 'number' && !isNaN(result)) {
+                    return renderMathResultCard(cleanInput, result);
+                }
+            } catch(e) {}
+        }
+
+        // Phrasing Math Normalization ("2 into 2", "10 times 5")
+        const mathEval = tryEvaluateMath(cleanInput);
+        if (mathEval) {
+            return renderMathResultCard(mathEval.cleanExpr, mathEval.result);
+        }
+
+        // 2. System Command Check
+        if (lower.startsWith('/clear')) {
+            messagesList.innerHTML = '';
+            window.chatHistory = [];
+            localStorage.removeItem('nikki_chat_history');
+            return "🧹 Chat history cleared!";
+        } else if (lower.startsWith('/memory')) {
+            if (memoryModal) memoryModal.style.display = "flex";
+            loadMemoryDatabase();
+            return "🧠 Memory management panel opened!";
+        }
+
+        // 3. Fallback to Local LLM Inference
+        return await getNikkiResponse(cleanInput);
+    }
+
     function handleUserSubmit(promptText) {
         if (isSpeaking) return;
-        
+
         if (promptText === lastProcessedPrompt && (Date.now() - window.lastSubmitTime) < 2500) {
             return;
         }
@@ -330,7 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.lastSubmitTime = Date.now();
 
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "🤖 Evaluating Query...";
+        if (statusText) statusText.innerText = "🤖 Autonomous Intent Routing...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -339,37 +362,23 @@ document.addEventListener("DOMContentLoaded", () => {
         appendMessage("user", promptText);
         const thinkingId = appendThinkingIndicator();
 
-        // 1. Math Evaluation Check
-        const mathEval = tryEvaluateMath(promptText);
-        if (mathEval) {
-            removeMessage(thinkingId);
-            window.lastCalculatedResult = mathEval.result;
-            window.lastCalculatedExpr = mathEval.cleanExpr;
-            
-            const formattedMsg = renderMathResultCard(mathEval.cleanExpr, mathEval.result);
-            appendMessage("assistant", formattedMsg, []);
-            speakOutLoud(`Calculated Result: ${mathEval.cleanExpr} equals ${mathEval.result}`);
-            return;
-        }
-
-        // 2. Ollama LLM REST API Endpoint
-        getNikkiResponse(promptText)
+        // Route intent
+        routeUserIntent(promptText)
             .then(responseText => {
                 removeMessage(thinkingId);
                 const dynamicChips = renderDynamicChips('text', promptText);
-                appendMessage("assistant", responseText, dynamicChips);
+                appendMessageStreaming("assistant", responseText, dynamicChips);
                 speakOutLoud(responseText);
             })
             .catch(() => {
                 removeMessage(thinkingId);
                 const responseText = evaluateFallbackPrompt(promptText);
                 const dynamicChips = renderDynamicChips('text', promptText);
-                appendMessage("assistant", responseText, dynamicChips);
+                appendMessageStreaming("assistant", responseText, dynamicChips);
                 speakOutLoud(responseText);
             });
     }
 
-    // Connect Frontend JS to Local LLM API (Ollama http://localhost:11434/api/generate)
     async function getNikkiResponse(userPrompt) {
         try {
             const response = await fetch('http://localhost:11434/api/generate', {
@@ -398,7 +407,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🧮 Math Parser (Normalizes "2 into 2" -> "2 * 2", "10 times 5" -> "10 * 5")
     function tryEvaluateMath(input) {
         try {
             let cleanInput = input
@@ -422,7 +430,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return null;
     }
 
-    // Render Math Result Card with State-Preserving Dynamic Parameter Chips
     function renderMathResultCard(expr, result) {
         window.lastCalculatedResult = result;
         const multVal = `${result} * 2`;
@@ -437,7 +444,6 @@ document.addEventListener("DOMContentLoaded", () => {
 </div>`;
     }
 
-    // Dynamic Context Chips Renderer
     function renderDynamicChips(responseType, userQuery) {
         if (responseType === 'math' && window.lastCalculatedResult !== null) {
             const res = window.lastCalculatedResult;
@@ -490,6 +496,46 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
+    // 🌊 Streaming Responses (Typing Effect Token Rendering)
+    function appendMessageStreaming(sender, fullText, suggestions = []) {
+        const row = document.createElement("div");
+        row.classList.add("msg-row", sender);
+        
+        const avatar = sender === "assistant" ? `<div class="msg-avatar">🤖</div>` : '';
+        const contentDiv = document.createElement("div");
+        contentDiv.classList.add("msg-content");
+        row.innerHTML = avatar;
+        row.appendChild(contentDiv);
+
+        messagesList.appendChild(row);
+        chatScroll.scrollTop = chatScroll.scrollHeight;
+
+        let index = 0;
+        const speed = 12; // ms per token
+
+        function typeNextChar() {
+            if (index < fullText.length) {
+                const partialText = fullText.slice(0, index + 1);
+                contentDiv.innerHTML = formatMarkdown(partialText);
+                index++;
+                chatScroll.scrollTop = chatScroll.scrollHeight;
+                setTimeout(typeNextChar, speed);
+            } else {
+                if (suggestions && suggestions.length > 0) {
+                    const suggestionsHtml = `
+                        <div class="followup-container">
+                            ${suggestions.map(s => `<button class="followup-chip" onclick="sendQuickQuery('${s.replace(/'/g, "\\'")}')">${s}</button>`).join('')}
+                        </div>
+                    `;
+                    contentDiv.innerHTML += suggestionsHtml;
+                }
+                if (window.hljs) hljs.highlightAll();
+                saveChatSession(sender, fullText);
+            }
+        }
+        typeNextChar();
+    }
+
     function appendMessage(sender, text, suggestions = []) {
         const row = document.createElement("div");
         row.classList.add("msg-row", sender);
@@ -519,6 +565,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
         messagesList.appendChild(row);
         chatScroll.scrollTop = chatScroll.scrollHeight;
+        if (window.hljs) hljs.highlightAll();
+        saveChatSession(sender, text);
+    }
+
+    function saveChatSession(sender, text) {
+        window.chatHistory.push({ sender, text, timestamp: new Date().toISOString() });
+        try {
+            localStorage.setItem('nikki_chat_history', JSON.stringify(window.chatHistory.slice(-50)));
+        } catch(e) {}
+    }
+
+    function restoreChatSession() {
+        try {
+            const saved = localStorage.getItem('nikki_chat_history');
+            if (saved) {
+                const history = JSON.parse(saved);
+                if (Array.isArray(history) && history.length > 0) {
+                    if (emptyState) emptyState.style.display = "none";
+                    history.forEach(m => appendMessage(m.sender, m.text, []));
+                }
+            }
+        } catch(e) {}
     }
 
     function appendThinkingIndicator() {
@@ -573,6 +641,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function formatMarkdown(text) {
+        if (window.marked) {
+            try {
+                return window.marked.parse(text);
+            } catch(e) {}
+        }
         let html = escapeHtml(text);
         html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
         html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');

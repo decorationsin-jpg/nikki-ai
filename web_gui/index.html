@@ -3,11 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nikki 3.6 - Local Autonomous AI Assistant</title>
+    <title>Nikki 3.6 Pro - Autonomous Local AI</title>
     <link rel="stylesheet" href="style.css">
     <link rel="manifest" href="../manifest.json">
     <meta name="theme-color" content="#0e0f12">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Marked.js & Highlight.js for Markdown & Syntax Highlighting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 </head>
 <body>
     <!-- Dynamic Animated Screen Background Canvas -->
@@ -28,14 +32,19 @@
                 <span>RAM: <strong id="telemetry-ram">38%</strong></span>
             </div>
 
+            <!-- Export Chat Button -->
+            <button id="export-chat-btn" class="header-action-btn" title="Export Chat History">
+                📥 Export
+            </button>
+
             <!-- Memory Settings Button -->
             <button id="memory-btn" class="header-action-btn" title="Memory Settings">
                 🧠 Memories
             </button>
 
             <!-- Push-to-Talk / VAD Pill -->
-            <div class="cont-mic-pill off" id="cont-mic-pill" title="Push-to-Talk Voice Mode">
-                <span>🔇 Mic Muted</span>
+            <div class="cont-mic-pill off" id="cont-mic-pill" title="Continuous Mic Toggle">
+                <span>🔇 Mic: OFF</span>
             </div>
 
             <!-- Theme Selector -->
@@ -109,7 +118,7 @@
                     </button>
                 </div>
             </form>
-            <div class="disclaimer">🔒 100% Standalone Custom AI. Local Processing & Privacy.</div>
+            <div class="disclaimer">🔒 100% Standalone WebGPU / Local Model Engine. Privacy Preserved.</div>
         </div>
     </div>
 
@@ -129,6 +138,6 @@
         </div>
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
