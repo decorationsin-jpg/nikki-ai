@@ -1,0 +1,17 @@
+{
+  "name": "Nikki - Autonomous Local AI Assistant",
+  "short_name": "Nikki AI",
+  "description": "100% Private, Autonomous Local AI Assistant with Voice & Visual Avatar",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0d19",
+  "theme_color": "#9d4edd",
+  "icons": [
+    {
+      "src": "assets/nikki_avatar.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -9,6 +9,20 @@ Nikki is a 100% private, self-learning, emotion-aware, autonomous AI assistant t
 
 ---
 
+## 🌐 Live Web Page & Mobile App (GitHub Pages)
+
+Nikki is now available as a **Live Web Page & Mobile App**!
+
+👉 **Live Web Page**: **`https://decorationsin-jpg.github.io/nikki-ai/`**
+
+### 📱 Install Nikki as an App on Android or iPhone:
+1. Open **`https://decorationsin-jpg.github.io/nikki-ai/`** on your phone browser.
+2. Tap the browser menu (`⋮` on Android / Share button on iPhone).
+3. Click **"Add to Home Screen"** or **"Install App"**.
+4. Nikki's icon will appear on your phone home screen as a native mobile app!
+
+---
+
 ## 📸 Nikki Visual Face & Web GUI Dashboard
 
 ![Nikki Avatar Portrait](assets/nikki_avatar.jpg)

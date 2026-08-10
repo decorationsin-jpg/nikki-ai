@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nikki - Autonomous Local AI Assistant</title>
+    <link rel="stylesheet" href="web_gui/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#9d4edd">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="sparkle">🌸</span>
+                <h1>NIKKI</h1>
+                <span class="badge">LOCAL AI 24/7</span>
+            </div>
+            <div class="status-indicator">
+                <span class="dot active"></span>
+                <span id="status-text">Nikki Web App Active</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="main-content">
+            <!-- Left Side: Face Avatar & Voice Control -->
+            <section class="avatar-section">
+                <div class="avatar-wrapper">
+                    <div class="sound-wave-ring ring-1"></div>
+                    <div class="sound-wave-ring ring-2"></div>
+                    <div class="avatar-frame">
+                        <img src="assets/nikki_avatar.jpg" alt="Nikki Face Avatar" id="nikki-avatar">
+                    </div>
+                </div>
+
+                <div class="voice-controls">
+                    <button id="mic-btn" class="mic-button">
+                        <svg class="mic-icon" viewBox="0 0 24 24" width="28" height="28">
+                            <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+                        </svg>
+                    </button>
+                    <p id="voice-status" class="voice-status">Tap microphone to speak to Nikki</p>
+                </div>
+            </section>
+
+            <!-- Right Side: Chat & Capabilities Panel -->
+            <section class="panel-section">
+                <!-- System Capability Cards -->
+                <div class="status-cards">
+                    <div class="card">
+                        <span class="card-icon">🧠</span>
+                        <div>
+                            <h4>Local Brain</h4>
+                            <p id="brain-status">Ollama / Web AI</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">📱</span>
+                        <div>
+                            <h4>Mobile App</h4>
+                            <p id="android-status">PWA Install Ready</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">🚨</span>
+                        <div>
+                            <h4>Security Lock</h4>
+                            <p id="security-status">PIN 1805 Protected</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <span class="card-icon">🔒</span>
+                        <div>
+                            <h4>Privacy</h4>
+                            <p id="privacy-status">100% Private & Local</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Box -->
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message assistant">
+                            <span class="sender">Nikki 🌸</span>
+                            <p>Hello! I am Nikki, your 100% private AI assistant. Type any task or click the microphone to talk with me!</p>
+                        </div>
+                    </div>
+
+                    <form id="chat-form" class="chat-input-form">
+                        <input type="text" id="user-input" placeholder="Give Nikki any task or question..." autocomplete="off">
+                        <button type="submit" class="send-btn">Send</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="web_gui/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+        }
+    </script>
+</body>
+</html>
