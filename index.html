@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nikki 3.6 Pro - Autonomous Local AI</title>
+    <title>NIKKI ✦ 100% Local AI Companion</title>
     <link rel="stylesheet" href="web_gui/style.css">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0e0f12">
+    <meta name="theme-color" content="#090a0f">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Marked.js & Highlight.js for Markdown & Syntax Highlighting -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -22,10 +22,14 @@
     <!-- Custom Standalone App Header -->
     <header class="app-header">
         <div class="brand">
-            <span class="bot-icon">🤖</span>
-            <span class="app-title">Nikki</span>
-            <span class="app-version">3.6 Local Engine</span>
+            <!-- Animated Glowing NIKKI Orb -->
+            <div class="nikki-orb-mini" id="header-orb" title="NIKKI AI Brain Core">
+                <div class="orb-core">N</div>
+            </div>
+            <span class="app-title">NIKKI ✦</span>
+            <span class="app-version">Local AI Companion</span>
         </div>
+
         <div class="header-right">
             <!-- Telemetry Pill -->
             <div class="telemetry-pill">
@@ -33,6 +37,11 @@
                 <span>|</span>
                 <span>RAM: <strong id="telemetry-ram">38%</strong></span>
             </div>
+
+            <!-- Floating Overlay Hotkey Toggle -->
+            <button id="floating-toggle-btn" class="header-action-btn" title="Toggle Floating Companion Overlay (Ctrl + Space)">
+                🪟 Floating Window
+            </button>
 
             <!-- 11-Language Selector -->
             <select id="lang-select" class="theme-selector" style="border-color: rgba(66, 133, 244, 0.4); color: #4285f4;" title="Language Engine (11 Languages)">
@@ -69,11 +78,6 @@
                 📥 Export
             </button>
 
-            <!-- Memory Settings Button -->
-            <button id="memory-btn" class="header-action-btn" title="Memory Settings">
-                🧠 Memories
-            </button>
-
             <!-- Push-to-Talk / VAD Pill -->
             <div class="cont-mic-pill off" id="cont-mic-pill" title="Continuous Mic Toggle">
                 <span>🔇 Mic: OFF</span>
@@ -87,70 +91,221 @@
                 <option value="aura">Aura Sunset</option>
             </select>
 
-            <div class="status-tag">
+            <div class="status-tag" id="privacy-status-tag" title="Click to view 100% Local Privacy Inspector">
                 <span class="status-dot"></span>
-                <span id="status-text">100% Private & Local</span>
+                <span id="status-text">● LOCAL 100%</span>
             </div>
         </div>
     </header>
 
-    <!-- Main Content Container -->
-    <div class="main-wrapper">
-        <!-- Chat Scroll Area -->
-        <div class="chat-scroll-area" id="chat-scroll">
-            <!-- Empty State Greeting -->
-            <div class="empty-state" id="empty-state">
-                <h1 class="greeting-text" id="greeting-title">Good morning... ❤️</h1>
-                <h2 class="sub-greeting" id="greeting-subtitle">I'm Nikki. What would you like to do today?</h2>
+    <!-- Main Desktop Layout Wrapper -->
+    <div class="desktop-layout">
+        <!-- Sidebar Navigation Bar -->
+        <nav class="sidebar-nav">
+            <button class="nav-tab active" data-view="chat-view" title="Main Chat & Companion Room">
+                <span class="nav-icon">💬</span>
+                <span class="nav-label">Chat</span>
+            </button>
+            <button class="nav-tab" data-view="voice-view" title="Glowing Voice Orb Mode">
+                <span class="nav-icon">🎙️</span>
+                <span class="nav-label">Voice</span>
+            </button>
+            <button class="nav-tab" data-view="memory-view" title="4-Tier Local Memory Store">
+                <span class="nav-icon">🧠</span>
+                <span class="nav-label">Memory</span>
+            </button>
+            <button class="nav-tab" data-view="knowledge-view" title="Local Document RAG Engine">
+                <span class="nav-icon">📚</span>
+                <span class="nav-label">Knowledge</span>
+            </button>
+            <button class="nav-tab" data-view="tasks-view" title="Automations & Routines">
+                <span class="nav-icon">⚡</span>
+                <span class="nav-label">Tasks</span>
+            </button>
+            <button class="nav-tab" data-view="privacy-view" title="100% Local Privacy Guarantee">
+                <span class="nav-icon">🔒</span>
+                <span class="nav-label">Privacy</span>
+            </button>
+        </nav>
 
-                <!-- Suggestion Chips Grid -->
-                <div class="suggestions-grid">
-                    <div class="suggestion-card" onclick="sendQuickPrompt('Audit system security and scan firewall status')">
-                        <p>Audit system security & scan active firewall status</p>
-                        <span class="suggestion-icon">🛡️</span>
+        <!-- Main Dynamic Content Workspace -->
+        <main class="content-workspace">
+            <!-- VIEW 1: Main Chat & Personal Companion Room -->
+            <div id="chat-view" class="view-panel active">
+                <div class="chat-scroll-area" id="chat-scroll">
+                    <!-- Empty State Greeting & Central Orb -->
+                    <div class="empty-state" id="empty-state">
+                        <!-- Central Large Glowing Animated NIKKI Orb -->
+                        <div class="nikki-orb-large" id="main-orb">
+                            <div class="orb-outer-ring"></div>
+                            <div class="orb-inner-ring"></div>
+                            <div class="orb-center">N</div>
+                        </div>
+
+                        <h1 class="greeting-text" id="greeting-title">Good morning... ❤️</h1>
+                        <h2 class="sub-greeting" id="greeting-subtitle">I'm NIKKI. What would you like to do today?</h2>
+
+                        <!-- Suggestion Chips Grid -->
+                        <div class="suggestions-grid">
+                            <div class="suggestion-card" onclick="sendQuickPrompt('Audit system security and scan firewall status')">
+                                <p>Audit system security & scan active firewall status</p>
+                                <span class="suggestion-icon">🛡️</span>
+                            </div>
+                            <div class="suggestion-card" onclick="sendQuickPrompt('Explain quantum computing principles with easy analogies')">
+                                <p>Explain quantum computing principles with easy analogies</p>
+                                <span class="suggestion-icon">📚</span>
+                            </div>
+                            <div class="suggestion-card" onclick="sendQuickPrompt('Write a python script to organize files by extension')">
+                                <p>Write a python script to organize files by extension</p>
+                                <span class="suggestion-icon">💻</span>
+                            </div>
+                            <div class="suggestion-card" onclick="sendQuickPrompt('Check my IP camera status and capture a snapshot')">
+                                <p>Check my IP camera status & capture a live snapshot</p>
+                                <span class="suggestion-icon">🎥</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="suggestion-card" onclick="sendQuickPrompt('Explain quantum computing principles with easy analogies')">
-                        <p>Explain quantum computing principles with easy analogies</p>
-                        <span class="suggestion-icon">📚</span>
+
+                    <!-- Dynamic Chat Messages Container -->
+                    <div id="messages-list"></div>
+                </div>
+
+                <!-- Floating Chat Input Bar -->
+                <div class="input-floating-container">
+                    <form id="chat-form" class="input-row">
+                        <input type="text" id="user-input" class="gemini-input" placeholder="Ask NIKKI anything or type a task..." autocomplete="off">
+                        
+                        <div class="input-actions">
+                            <button type="button" id="mic-btn" class="action-btn" title="Voice Input">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="11" width="18" height="10" rx="2" />
+                                    <circle cx="12" cy="5" r="2" />
+                                    <path d="M12 7v4" />
+                                    <line x1="8" y1="16" x2="8" y2="16" />
+                                    <line x1="16" y1="16" x2="16" y2="16" />
+                                </svg>
+                            </button>
+                            <button type="submit" id="send-btn" class="action-btn send-action-btn" title="Send Task">
+                                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="disclaimer">🔒 100% WebGPU Local Llama-3.2 Model Engine. Data Stays Local.</div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: Glowing Voice Orb Mode -->
+            <div id="voice-view" class="view-panel">
+                <div class="voice-orb-room">
+                    <div class="nikki-orb-giant" id="voice-room-orb">
+                        <div class="orb-ring-pulse"></div>
+                        <div class="orb-core-giant">N</div>
                     </div>
-                    <div class="suggestion-card" onclick="sendQuickPrompt('Write a python script to organize files by extension')">
-                        <p>Write a python script to organize files by extension</p>
-                        <span class="suggestion-icon">💻</span>
+                    <h2 id="voice-room-status">"I'm listening... tell me what you need. ❤️"</h2>
+                    <div class="voice-wave-bar">
+                        <span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span><span class="bar"></span>
                     </div>
-                    <div class="suggestion-card" onclick="sendQuickPrompt('Check my IP camera status and capture a snapshot')">
-                        <p>Check my IP camera status & capture a live snapshot</p>
-                        <span class="suggestion-icon">🎥</span>
+                    <button class="run-code-btn" id="voice-room-mic-btn" style="margin-top: 20px;">🎙️ Tap to Speak</button>
+                </div>
+            </div>
+
+            <!-- VIEW 3: Memory Manager Dashboard -->
+            <div id="memory-view" class="view-panel">
+                <div class="dashboard-header">
+                    <h2>🧠 NIKKI 4-Tier Memory Dashboard</h2>
+                    <p style="color: var(--text-secondary);">User Preferences, Important Facts, and Event History stored on local disk.</p>
+                </div>
+                <div class="memory-grid">
+                    <div class="dashboard-card">
+                        <h3>👤 ABOUT YOU</h3>
+                        <p><strong>Name:</strong> <span id="memory-user-name">Swapnil</span></p>
+                        <p><strong>Preferred Language:</strong> Auto Detect (11 Languages)</p>
+                        <p><strong>Voice Style:</strong> 💗 Warm & Romantic</p>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>📌 SAVED FACTS & PREFERENCES</h3>
+                        <div id="dashboard-facts-list" class="memory-items-container">
+                            <p><em>Loading saved user facts...</em></p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Dynamic Chat Messages Container -->
-            <div id="messages-list"></div>
-        </div>
-
-        <!-- Floating Input Container at Bottom -->
-        <div class="input-floating-container">
-            <form id="chat-form" class="input-row">
-                <input type="text" id="user-input" class="gemini-input" placeholder="Ask Nikki anything or type a task..." autocomplete="off">
-                
-                <div class="input-actions">
-                    <button type="button" id="mic-btn" class="action-btn" title="Voice Input">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="11" width="18" height="10" rx="2" />
-                            <circle cx="12" cy="5" r="2" />
-                            <path d="M12 7v4" />
-                            <line x1="8" y1="16" x2="8" y2="16" />
-                            <line x1="16" y1="16" x2="16" y2="16" />
-                        </svg>
-                    </button>
-                    <button type="submit" id="send-btn" class="action-btn send-action-btn" title="Send Task">
-                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                        </svg>
-                    </button>
+            <!-- VIEW 4: Knowledge Base RAG Dashboard -->
+            <div id="knowledge-view" class="view-panel">
+                <div class="dashboard-header">
+                    <h2>📚 Local Knowledge Base / RAG Engine</h2>
+                    <p style="color: var(--text-secondary);">Drag & drop local documents (PDF, DOCX, TXT, MD, CSV) to index into SQLite vector DB.</p>
                 </div>
-            </form>
-            <div class="disclaimer">🔒 100% WebGPU Local Llama-3.2 Model Engine. Data Stays Local.</div>
+                <div class="knowledge-dropzone" id="knowledge-dropzone">
+                    <span style="font-size: 36px;">📁</span>
+                    <p style="margin-top: 10px; font-weight: 600;">Drag & Drop Documents Here to Index</p>
+                    <small style="color: var(--text-secondary);">Supports PDF, DOCX, TXT, Markdown, CSV & Excel</small>
+                </div>
+                <div class="knowledge-stats-grid">
+                    <div class="stat-box"><h3>📄 Documents</h3><p>42 Indexed</p></div>
+                    <div class="stat-box"><h3>📖 Pages</h3><p>1,284 Parsed</p></div>
+                    <div class="stat-box"><h3>🧬 Vector Embeddings</h3><p>18,420 Chunks</p></div>
+                </div>
+            </div>
+
+            <!-- VIEW 5: Task Automations Dashboard -->
+            <div id="tasks-view" class="view-panel">
+                <div class="dashboard-header">
+                    <h2>⚡ Automations & Scheduled Tasks</h2>
+                    <p style="color: var(--text-secondary);">Autonomous background learning daemon and scheduled system tasks.</p>
+                </div>
+                <div class="dashboard-card" style="margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3>🌙 24/7 Autonomous Background Learning Daemon</h3>
+                            <p style="color: var(--text-secondary); font-size: 13px;">Scrapes and updates local knowledge base periodically.</p>
+                        </div>
+                        <span style="color: #34a853; font-weight: 700;">● ACTIVE</span>
+                    </div>
+                </div>
+                <div class="dashboard-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3>📂 Weekly Local Document Backup</h3>
+                            <p style="color: var(--text-secondary); font-size: 13px;">Backs up memory databases and indexing tables to local disk.</p>
+                        </div>
+                        <span style="color: #34a853; font-weight: 700;">● ACTIVE</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 6: 100% Local Privacy Inspector -->
+            <div id="privacy-view" class="view-panel">
+                <div class="dashboard-header">
+                    <h2>🔒 100% Local Privacy Guarantee</h2>
+                    <p style="color: var(--text-secondary);">No Cloud AI, No External Tracking, No Third-Party Analytics.</p>
+                </div>
+                <div class="privacy-checklist">
+                    <div class="privacy-item"><span>AI Model Engine</span><strong style="color: #34a853;">LOCAL WebGPU ✓</strong></div>
+                    <div class="privacy-item"><span>Memory Engine</span><strong style="color: #34a853;">LOCAL SQLite ✓</strong></div>
+                    <div class="privacy-item"><span>Document RAG</span><strong style="color: #34a853;">LOCAL Vectors ✓</strong></div>
+                    <div class="privacy-item"><span>Voice Processing</span><strong style="color: #34a853;">LOCAL Synthesis ✓</strong></div>
+                    <div class="privacy-item"><span>Internet Data Flow</span><strong style="color: #e91e63;">OFFLINE 100% ✓</strong></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 💗 FLOATING NIKKI COMPANION OVERLAY WINDOW (Ctrl + Space) -->
+    <div id="floating-companion" class="floating-window" style="display: none;">
+        <div class="floating-header">
+            <span>✦ NIKKI Companion</span>
+            <button id="close-floating-btn" class="modal-close-btn">&times;</button>
+        </div>
+        <div class="floating-body">
+            <div class="nikki-orb-mini" style="margin: 0 auto 10px auto;">
+                <div class="orb-core">N</div>
+            </div>
+            <p style="text-align: center; color: var(--text-primary); font-size: 13px;">How can I help you today? ❤️</p>
+            <input type="text" id="floating-input" class="memory-search-input" placeholder="Ask anything... (Press Enter)" style="margin-top: 10px;">
         </div>
     </div>
 

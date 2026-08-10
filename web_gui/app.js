@@ -14,6 +14,17 @@ document.addEventListener("DOMContentLoaded", () => {
     const telemetryRam = document.getElementById("telemetry-ram");
     const exportChatBtn = document.getElementById("export-chat-btn");
 
+    // Sidebar & View Switcher Elements
+    const navTabs = document.querySelectorAll(".nav-tab");
+    const viewPanels = document.querySelectorAll(".view-panel");
+    const privacyStatusTag = document.getElementById("privacy-status-tag");
+
+    // Floating Companion Elements
+    const floatingToggleBtn = document.getElementById("floating-toggle-btn");
+    const floatingCompanion = document.getElementById("floating-companion");
+    const closeFloatingBtn = document.getElementById("close-floating-btn");
+    const floatingInput = document.getElementById("floating-input");
+
     // Memory Management Modal Elements
     const memoryBtn = document.getElementById("memory-btn");
     const memoryModal = document.getElementById("memory-modal");
@@ -33,6 +44,72 @@ document.addEventListener("DOMContentLoaded", () => {
     const adminResponseInput = document.getElementById("admin-response-input");
     const adminSaveRuleBtn = document.getElementById("admin-save-rule-btn");
     const adminRulesList = document.getElementById("admin-rules-list");
+
+    // View Navigation Handler
+    navTabs.forEach(tab => {
+        tab.addEventListener("click", () => {
+            const targetView = tab.getAttribute("data-view");
+            switchView(targetView);
+        });
+    });
+
+    if (privacyStatusTag) {
+        privacyStatusTag.addEventListener("click", () => switchView("privacy-view"));
+    }
+
+    function switchView(targetViewId) {
+        navTabs.forEach(t => {
+            if (t.getAttribute("data-view") === targetViewId) t.classList.add("active");
+            else t.classList.remove("active");
+        });
+        viewPanels.forEach(p => {
+            if (p.id === targetViewId) p.classList.add("active");
+            else p.classList.remove("active");
+        });
+    }
+
+    // 💗 Floating Companion Overlay Window Controls & Hotkey (Ctrl + Space)
+    if (floatingToggleBtn) {
+        floatingToggleBtn.addEventListener("click", toggleFloatingCompanion);
+    }
+    if (closeFloatingBtn) {
+        closeFloatingBtn.addEventListener("click", () => {
+            if (floatingCompanion) floatingCompanion.style.display = "none";
+        });
+    }
+
+    function toggleFloatingCompanion() {
+        if (floatingCompanion) {
+            if (floatingCompanion.style.display === "none" || !floatingCompanion.style.display) {
+                floatingCompanion.style.display = "block";
+                if (floatingInput) floatingInput.focus();
+            } else {
+                floatingCompanion.style.display = "none";
+            }
+        }
+    }
+
+    // Global Hotkey (Ctrl + Space)
+    document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey && e.code === "Space") {
+            e.preventDefault();
+            toggleFloatingCompanion();
+        }
+    });
+
+    if (floatingInput) {
+        floatingInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                const query = floatingInput.value.trim();
+                if (query) {
+                    floatingInput.value = "";
+                    switchView("chat-view");
+                    handleUserSubmit(query);
+                    if (floatingCompanion) floatingCompanion.style.display = "none";
+                }
+            }
+        });
+    }
 
     // 🌐 11-Language Multilingual Dictionary & Locale Map
     const MULTILINGUAL_DICTIONARY = {
