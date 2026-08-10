@@ -14,6 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const telemetryRam = document.getElementById("telemetry-ram");
     const exportChatBtn = document.getElementById("export-chat-btn");
 
+    // Emotion Engine UI Elements
+    const emotionMoodIcon = document.getElementById("emotion-mood-icon");
+    const emotionMoodText = document.getElementById("emotion-mood-text");
+
     // Sidebar & View Switcher Elements
     const navTabs = document.querySelectorAll(".nav-tab");
     const viewPanels = document.querySelectorAll(".view-panel");
@@ -44,6 +48,51 @@ document.addEventListener("DOMContentLoaded", () => {
     const adminResponseInput = document.getElementById("admin-response-input");
     const adminSaveRuleBtn = document.getElementById("admin-save-rule-btn");
     const adminRulesList = document.getElementById("admin-rules-list");
+
+    // ❤️ Global Emotion State Engine
+    window.NIKKI_EMOTION = {
+        mood: "AFFECTIONATE",
+        intensity: 0.65,
+        empathy: 0.80,
+        excitement: 0.25,
+        affection: 0.70,
+        confidence: 0.90
+    };
+
+    function updateEmotionState(userPrompt) {
+        const lower = userPrompt.toLowerCase();
+        let newMood = "AFFECTIONATE";
+        let icon = "💗";
+
+        if (lower.includes("got the job") || lower.includes("passed") || lower.includes("promoted") || lower.includes("won") || lower.includes("yay")) {
+            newMood = "EXCITED";
+            icon = "😄";
+            window.NIKKI_EMOTION.excitement = 0.95;
+            window.NIKKI_EMOTION.intensity = 0.90;
+        } else if (lower.includes("difficult day") || lower.includes("sad") || lower.includes("failed") || lower.includes("deleted file") || lower.includes("tired")) {
+            newMood = "EMPATHETIC";
+            icon = "🫂";
+            window.NIKKI_EMOTION.empathy = 0.95;
+            window.NIKKI_EMOTION.intensity = 0.75;
+        } else if (lower.includes("what is") || lower.includes("how") || lower.includes("explain") || lower.includes("search")) {
+            newMood = "CURIOUS";
+            icon = "🤔";
+            window.NIKKI_EMOTION.confidence = 0.95;
+        } else if (lower.includes("love you") || lower.includes("miss you") || lower.includes("nikki") || lower.includes("hi")) {
+            newMood = "AFFECTIONATE";
+            icon = "💗";
+            window.NIKKI_EMOTION.affection = 0.90;
+        } else {
+            newMood = "CALM";
+            icon = "😌";
+            window.NIKKI_EMOTION.intensity = 0.50;
+        }
+
+        window.NIKKI_EMOTION.mood = newMood;
+        if (emotionMoodIcon) emotionMoodIcon.innerText = icon;
+        if (emotionMoodText) emotionMoodText.innerText = `Mood: ${newMood}`;
+        return newMood;
+    }
 
     // View Navigation Handler
     navTabs.forEach(tab => {
@@ -716,12 +765,15 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🔀 Conversational State Memory Intent Router with Code-Switching & Multilingual Support
+    // 🔀 Conversational State Memory Intent Router with Emotion State Engine
     async function routeUserIntent(input) {
         const cleanInput = input.trim();
         const lowerInput = cleanInput.toLowerCase();
         const detectedLang = detectInputLanguage(cleanInput);
         const dict = MULTILINGUAL_DICTIONARY[detectedLang] || MULTILINGUAL_DICTIONARY['en'];
+
+        // ❤️ Update Emotion Engine State from context
+        updateEmotionState(cleanInput);
 
         // 🌟 PRIORITY 0: Check Admin Response Correction Overrides
         if (window.adminOverrides && window.adminOverrides.length > 0) {
@@ -1087,7 +1139,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (el) el.remove();
     }
 
-    // 🎙️ Speech Synthesis with Multilingual Locales & Female Persona Inflection Parameters
+    // 🎙️ Speech Synthesis with Emotion-Driven Prosody Parameters (Pitch, Rate, Volume, Fillers)
     function speakOutLoud(text) {
         if (synth) {
             isSpeaking = true;
@@ -1095,26 +1147,26 @@ document.addEventListener("DOMContentLoaded", () => {
             currentState = "SPEAKING";
             if (statusText) statusText.innerText = "🔊 Nikki Speaking...";
 
-            const persona = window.currentVoicePersona || 'ROMANTIC';
+            const mood = window.NIKKI_EMOTION.mood || 'AFFECTIONATE';
             const cleanText = text.replace(/[*#`]/g, "").slice(0, 250);
             const utterance = new SpeechSynthesisUtterance(cleanText);
 
-            // Configure Voice Inflection Parameters
-            if (persona === 'ROMANTIC') {
-                utterance.pitch = 1.2;  // Medium-high natural female
-                utterance.rate = 0.88;  // Slightly slow & relaxed
-            } else if (persona === 'FRIENDLY') {
-                utterance.pitch = 1.1;
-                utterance.rate = 0.95;
-            } else if (persona === 'PLAYFUL') {
-                utterance.pitch = 1.3;
+            // Configure Speech Prosody from Context Emotion State
+            if (mood === 'EXCITED') {
+                utterance.pitch = 1.35;
                 utterance.rate = 1.05;
-            } else if (persona === 'CALM') {
+            } else if (mood === 'HAPPY') {
+                utterance.pitch = 1.25;
+                utterance.rate = 1.0;
+            } else if (mood === 'EMPATHETIC' || mood === 'CONCERNED') {
+                utterance.pitch = 1.05;
+                utterance.rate = 0.82;
+            } else if (mood === 'CALM') {
                 utterance.pitch = 0.95;
                 utterance.rate = 0.85;
-            } else {
-                utterance.pitch = 1.0;
-                utterance.rate = 1.0;
+            } else { // AFFECTIONATE / Warm Companion
+                utterance.pitch = 1.20;
+                utterance.rate = 0.88;
             }
 
             // Set Speech Language Locale
