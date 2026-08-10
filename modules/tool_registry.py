@@ -26,6 +26,9 @@ from modules.android_termux_engine import AndroidTermuxEngine
 from modules.master_assistant_hub import MasterAssistantHub
 from modules.trilingual_engine import TrilingualEngine
 from modules.responsible_ai import ResponsibleAIEngine
+from modules.advanced_code_executor import AdvancedCodeExecutor
+from modules.deep_web_intelligence import DeepWebIntelligence
+from modules.system_optimizer import SystemOptimizer
 
 class ToolRegistry:
     def __init__(self):
@@ -53,6 +56,9 @@ class ToolRegistry:
         self.hub = MasterAssistantHub()
         self.tri_lang = TrilingualEngine()
         self.resp_ai = ResponsibleAIEngine()
+        self.executor = AdvancedCodeExecutor()
+        self.deep_web = DeepWebIntelligence()
+        self.optimizer = SystemOptimizer()
 
     def get_tool_descriptions(self) -> str:
         return """
@@ -117,6 +123,10 @@ Available Tools:
 58. detect_language(text): Detect whether user text/voice is English, Hindi (हिंदी), or Marathi (मराठी).
 59. speak_trilingual(text, language): Speak out loud in English, Hindi (हिंदी), or Marathi (मराठी).
 60. rag_query(query): Perform Retrieval-Augmented Generation (RAG) with source citations, confidence scoring, and anti-hallucination guardrails.
+61. execute_python(code_str): Dynamically execute Python code in an isolated sandbox environment and capture stdout/stderr.
+62. deep_research(topic): Generate a deep research briefing synthesizing Wikipedia, GitHub repos, and web articles.
+63. optimize_memory(): Free unused RAM and force garbage collection cleanup.
+64. get_hardware_telemetry(): Fetch detailed CPU, RAM, and Disk metrics.
 """
 
     def execute_tool(self, tool_name: str, **kwargs) -> str:
@@ -250,6 +260,14 @@ Available Tools:
                 return self.tri_lang.speak_trilingual(kwargs.get("text", ""), kwargs.get("language", "english"))
             elif tool_name == "rag_query":
                 return str(self.resp_ai.rag_query(kwargs.get("query", "")))
+            elif tool_name == "execute_python":
+                return str(self.executor.execute_python(kwargs.get("code_str", "")))
+            elif tool_name == "deep_research":
+                return self.deep_web.build_deep_research_briefing(kwargs.get("topic", ""))
+            elif tool_name == "optimize_memory":
+                return self.optimizer.optimize_memory()
+            elif tool_name == "get_hardware_telemetry":
+                return str(self.optimizer.get_hardware_telemetry())
             else:
                 return f"Error: Unknown tool '{tool_name}'"
         except Exception as e:
