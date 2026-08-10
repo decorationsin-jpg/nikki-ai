@@ -18,9 +18,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeMemoryModal = document.getElementById("close-memory-modal");
     const memoryItemsList = document.getElementById("memory-items-list");
 
-    // Global Math & Memory State
+    // 🧠 Global Conversational & State Memory Store
+    window.nikkiMemory = {
+        userName: localStorage.getItem('nikki_user_name') || null,
+        chatHistory: []
+    };
     window.lastCalculatedResult = null;
-    window.chatHistory = [];
 
     // 🎙️ Voice & VAD Controls
     let micEnabled = false;
@@ -129,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // 📥 Export Chat History
     if (exportChatBtn) {
         exportChatBtn.addEventListener("click", () => {
-            const transcript = window.chatHistory.map(m => `**${m.sender.toUpperCase()}**: ${m.text}`).join('\n\n');
+            const transcript = window.nikkiMemory.chatHistory.map(m => `**${m.role.toUpperCase()}**: ${m.content}`).join('\n\n');
             const blob = new Blob([transcript], { type: 'text/markdown' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -238,10 +241,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 renderMemoryItems(data.memories || []);
             })
             .catch(() => {
-                renderMemoryItems([
-                    { id: 1, fact: "Master Security PIN: 1805", date: "2026-08-10" },
-                    { id: 2, fact: "User Preference: Dark Mode & 100% Local Privacy", date: "2026-08-10" }
-                ]);
+                const localMems = [];
+                if (window.nikkiMemory.userName) {
+                    localMems.push({ id: 1, fact: `User Name: ${window.nikkiMemory.userName}`, date: new Date().toLocaleDateString() });
+                }
+                localMems.push({ id: 2, fact: "Preference: 100% Local Privacy & WebGPU Engine", date: new Date().toLocaleDateString() });
+                renderMemoryItems(localMems);
             });
     }
 
@@ -264,6 +269,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     window.deleteMemoryEntry = function(memId) {
+        if (typeof memId === 'string' && memId.includes("User Name:")) {
+            window.nikkiMemory.userName = null;
+            localStorage.removeItem('nikki_user_name');
+        }
         fetch("/api/memory/delete", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -299,12 +308,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // 🌐 Real Web Search Integration (DuckDuckGo Instant Answer + Wikipedia REST API)
+    // 🌐 Web Search API Integration
     async function fetchWebSearchResults(searchQuery) {
         const cleanQuery = searchQuery.replace(/search the web|search meaning of|search meaning|search for|search|meaning of/gi, "").trim();
         const queryToUse = cleanQuery.length > 0 ? cleanQuery : searchQuery;
 
-        // Specific Knowledge Case: "Hindi"
         if (queryToUse.toLowerCase().includes("hindi")) {
             return `🌐 **Web Search Results for "Meaning of Hindi"**:\n\n` +
                    `• **Word Origin**: The word *"Hindi"* originates from the Classical Persian word *Hind* (meaning *"Land of the Indus River"*).\n` +
@@ -313,7 +321,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         try {
-            // 1. DuckDuckGo Instant Answer API
             const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(queryToUse)}&format=json&no_html=1`;
             const res = await fetch(ddgUrl);
             const data = await res.json();
@@ -324,7 +331,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 return `🌐 **Web Search Results for "${queryToUse}"**:\n\n${data.RelatedTopics[0].Text}\n\n📌 Source: [DuckDuckGo Search](${data.RelatedTopics[0].FirstURL || 'https://duckduckgo.com'})`;
             }
 
-            // 2. Wikipedia Summary API Fallback
             const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(queryToUse)}`;
             const wikiRes = await fetch(wikiUrl);
             if (wikiRes.ok) {
@@ -340,17 +346,60 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🔀 Autonomous Intent Router
+    // 🔀 Conversational State Memory Intent Router
     async function routeUserIntent(input) {
         const cleanInput = input.trim();
-        const lower = cleanInput.toLowerCase();
+        const lowerInput = cleanInput.toLowerCase();
 
-        // 1. Web Search Intent Detection
-        if (lower.startsWith("search") || lower.includes("search the web") || lower.includes("meaning of")) {
+        // --- Rule A: Greetings ("hi", "hello", "hey") ---
+        if (["hi", "hello", "hey", "hi nikki", "hello nikki"].includes(lowerInput)) {
+            if (window.nikkiMemory.userName) {
+                return `Hello **${window.nikkiMemory.userName}**! How can I help you today? 😊`;
+            } else {
+                return `Hello! I'm **Nikki 3.6**, your autonomous local AI assistant. What's your name? 😊`;
+            }
+        }
+
+        // --- Rule B: Memory Intent ("my name is...", "i am...", "call me...") ---
+        const nameMatch = lowerInput.match(/(?:my name is|i am|call me)\s+([a-zA-Z]+)/i);
+        if (nameMatch) {
+            const extractedName = nameMatch[1];
+            const formattedName = extractedName.charAt(0).toUpperCase() + extractedName.slice(1).toLowerCase();
+            window.nikkiMemory.userName = formattedName;
+            localStorage.setItem('nikki_user_name', formattedName);
+
+            // Persist to local memory backend
+            try {
+                fetch("/api/task", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ goal: `Teach Nikki a personal fact: User name is ${formattedName}` })
+                }).catch(() => {});
+            } catch(e){}
+
+            return `Nice to meet you, **${formattedName}**! I will remember your name. 💖`;
+        }
+
+        // --- Rule C: Memory Recall ("what is my name", "who am i") ---
+        if (lowerInput.includes("what is my name") || lowerInput.includes("who am i") || lowerInput.includes("do you know my name")) {
+            if (window.nikkiMemory.userName) {
+                return `Your name is **${window.nikkiMemory.userName}**! ✨`;
+            } else {
+                return `You haven't told me your name yet! What should I call you? 😊`;
+            }
+        }
+
+        // --- Rule D: Self-Identity ("what is your name", "who are you") ---
+        if (lowerInput.includes("what is your name") || lowerInput.includes("who are you")) {
+            return `I am **Nikki 3.6**, your autonomous local AI engine running directly on your device! 🤖✨`;
+        }
+
+        // --- Rule E: Web Search Intent ---
+        if (lowerInput.startsWith("search") || lowerInput.includes("search the web") || lowerInput.includes("meaning of")) {
             return await fetchWebSearchResults(cleanInput);
         }
 
-        // 2. Pure Arithmetic Check
+        // --- Rule F: Pure Arithmetic Check ---
         if (/^[0-9\s\+\-\*\/\(\)\.\^]+$/.test(cleanInput)) {
             try {
                 const sanitized = cleanInput.replace(/\^/g, '**');
@@ -367,19 +416,19 @@ document.addEventListener("DOMContentLoaded", () => {
             return renderMathResultCard(mathEval.cleanExpr, mathEval.result);
         }
 
-        // 3. System Command Check
-        if (lower.startsWith('/clear')) {
+        // --- Rule G: System Commands ---
+        if (lowerInput.startsWith('/clear')) {
             messagesList.innerHTML = '';
-            window.chatHistory = [];
+            window.nikkiMemory.chatHistory = [];
             localStorage.removeItem('nikki_chat_history');
             return "🧹 Chat history cleared!";
-        } else if (lower.startsWith('/memory')) {
+        } else if (lowerInput.startsWith('/memory')) {
             if (memoryModal) memoryModal.style.display = "flex";
             loadMemoryDatabase();
             return "🧠 Memory management panel opened!";
         }
 
-        // 4. Fallback to Local LLM Inference
+        // --- Rule H: Fallback to Local LLM Engine ---
         return await getNikkiResponse(cleanInput);
     }
 
@@ -393,7 +442,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.lastSubmitTime = Date.now();
 
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "🌐 Searching Web / Evaluating...";
+        if (statusText) statusText.innerText = "🤖 Reason & State Routing...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -402,7 +451,6 @@ document.addEventListener("DOMContentLoaded", () => {
         appendMessage("user", promptText);
         const thinkingId = appendThinkingIndicator();
 
-        // Route intent
         routeUserIntent(promptText)
             .then(responseText => {
                 removeMessage(thinkingId);
@@ -609,9 +657,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function saveChatSession(sender, text) {
-        window.chatHistory.push({ sender, text, timestamp: new Date().toISOString() });
+        window.nikkiMemory.chatHistory.push({ role: sender === 'assistant' ? 'assistant' : 'user', content: text });
         try {
-            localStorage.setItem('nikki_chat_history', JSON.stringify(window.chatHistory.slice(-50)));
+            localStorage.setItem('nikki_chat_history', JSON.stringify(window.nikkiMemory.chatHistory.slice(-50)));
         } catch(e) {}
     }
 
@@ -621,8 +669,9 @@ document.addEventListener("DOMContentLoaded", () => {
             if (saved) {
                 const history = JSON.parse(saved);
                 if (Array.isArray(history) && history.length > 0) {
+                    window.nikkiMemory.chatHistory = history;
                     if (emptyState) emptyState.style.display = "none";
-                    history.forEach(m => appendMessage(m.sender, m.text, []));
+                    history.forEach(m => appendMessage(m.role, m.content, []));
                 }
             }
         } catch(e) {}
