@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const statusText = document.getElementById("status-text");
     const themeSelect = document.getElementById("theme-select");
     const voicePersonaSelect = document.getElementById("voice-persona-select");
+    const langSelect = document.getElementById("lang-select");
     const telemetryCpu = document.getElementById("telemetry-cpu");
     const telemetryRam = document.getElementById("telemetry-ram");
     const exportChatBtn = document.getElementById("export-chat-btn");
@@ -33,6 +34,76 @@ document.addEventListener("DOMContentLoaded", () => {
     const adminSaveRuleBtn = document.getElementById("admin-save-rule-btn");
     const adminRulesList = document.getElementById("admin-rules-list");
 
+    // 🌐 11-Language Multilingual Dictionary & Locale Map
+    const MULTILINGUAL_DICTIONARY = {
+        "en": {
+            greeting: "Good morning... ❤️ I'm NIKKI. What would you like to do today?",
+            here_for_you: "Of course, I'm here for you. ❤️",
+            working_on_it: "Sure! Let me take care of that for you. ❤️",
+            success: "Done! That worked perfectly. I'm happy I could help. ❤️"
+        },
+        "hi": {
+            greeting: "नमस्ते... ❤️ मैं निक्की हूँ। आज मैं आपकी क्या मदद कर सकती हूँ?",
+            here_for_you: "बिल्कुल… मैं यहीं हूँ आपके लिए। ❤️",
+            working_on_it: "जी बिल्कुल, मैं आपके लिए यह कर देती हूँ। ❤️",
+            success": "हो गया! यह काम एकदम सही हुआ। ❤️"
+        },
+        "mr": {
+            greeting: "शुभ प्रभात... ❤️ मी नक्की आहे. आज आपण काय करूया?",
+            here_for_you: "नक्की… मी तुझ्यासाठी इथेच आहे. ❤️",
+            working_on_it: "हो नक्की, मी तुझ्यासाठी हे करून देते. ❤️",
+            success": "झालं! हे काम पूर्ण झालं आहे. ❤️"
+        },
+        "bn": {
+            greeting: "শুভ সকাল... ❤️ আমি নিক্কি। আজ আপনাকে কীভাবে সাহায্য করতে পারি?",
+            here_for_you: "অবশ্যই… আমি তোমার জন্য আছি। ❤️",
+            working_on_it: "অবশ্যই, আমি আপনার জন্য এটি করে দিচ্ছি। ❤️",
+            success": "হয়ে গেছে! কাজটা একদম নিখুঁত হয়েছে। ❤️"
+        },
+        "gu": {
+            greeting: "સુપ્રભાત... ❤️ હું નિક્કી છું. આજે હું તમારી શું મદદ કરી શકું?",
+            here_for_you: "ચોક્કસ… હું તમારા માટે અહીં જ છું. ❤️",
+            working_on_it: "હા ચોક્કસ, હું તમારા માટે આ કરી દઉં છું. ❤️",
+            success": "થઈ ગયું! આ કામ એકદમ યોગ્ય રીતે થયું. ❤️"
+        },
+        "ta": {
+            greeting: "காலை வணக்கம்... ❤️ நான் நிக்கி. இன்று உங்களுக்கு எவ்வாறு உதவட்டும்?",
+            here_for_you: "நிச்சயமாக… நான் உங்களுக்காக இங்கே இருக்கிறேன். ❤️",
+            working_on_it: "நிச்சயமாக, நான் உங்களுக்காக இதைச் செய்கிறேன். ❤️",
+            success": "முடிந்தது! இது மிகச்சரியாக முடிந்தது. ❤️"
+        },
+        "te": {
+            greeting: "శుభోదయం... ❤️ నేను నిక్కి. ఈరోజు మీకు ఎలా సహాయపడను?",
+            here_for_you: "తప్పకుండా… నేను మీ కోసం ఇక్కడే ఉన్నాను. ❤️",
+            working_on_it: "ఖచ్చితంగా, నేను మీ కోసం ఇది చేస్తాను. ❤️",
+            success": "పూర్తయింది! ఇది చాలా చక్కగా జరిగింది. ❤️"
+        },
+        "kn": {
+            greeting: "ಶುಭೋದಯ... ❤️ ನಾನು ನಿಕ್ಕಿ. ಇಂದು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?",
+            here_for_you: "ಖಂಡಿತ... ನಾನು ನಿಮಗಾಗಿ ಇಲ್ಲಿದ್ದೇನೆ. ❤️",
+            working_on_it: "ಖಂಡಿತ, ನಾನು ನಿಮಗಾಗಿ ಇದನ್ನು ಮಾಡುತ್ತೇನೆ. ❤️",
+            success": "ಆಯಿತು! ಇದು ಯಶಸ್ವಿಯಾಗಿ ಪೂರ್ಣಗೊಂಡಿದೆ. ❤️"
+        },
+        "ml": {
+            greeting: "സുപ്രഭാതം... ❤️ ഞാൻ നിക്കി. ഇന്ന് ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം?",
+            here_for_you: "തീർച്ചയായും... ഞാൻ നിങ്ങൾക്കായി ഇവിടെയുണ്ട്. ❤️",
+            working_on_it: "തീർച്ചയായും, ഞാൻ നിങ്ങൾക്കായി ഇത് ചെയ്യാം. ❤️",
+            success": "കഴിഞ്ഞു! ഇത് മികച്ചതായി പൂർത്തിയായി. ❤️"
+        },
+        "pa": {
+            greeting: "ਸ਼ੁਭ ਸਵੇਰ... ❤️ ਮੈਂ ਨਿੱਕੀ ਹਾਂ। ਅੱਜ ਮੈਂ ਤੁਹਾਡੀ ਕੀ ਮਦਦ ਕਰ ਸਕਦੀ ਹਾਂ?",
+            here_for_you: "ਬਿਲਕੁਲ... ਮੈਂ ਤੁਹਾਡੇ ਲਈ ਇੱਥੇ ਹੀ ਹਾਂ। ❤️",
+            working_on_it: "ਹਾਂ ਜੀ, ਮੈਂ ਤੁਹਾਡੇ ਲਈ ਇਹ ਕਰ ਦਿੰਦੀ ਹਾਂ। ❤️",
+            success": "ਹੋ ਗਿਆ! ਇਹ ਕੰਮ ਬਿਲਕੁਲ ਠੀਕ ਹੋ ਗਿਆ। ❤️"
+        },
+        "ur": {
+            greeting: "صبح بخیر... ❤️ میں نکی ہوں۔ آج میں آپ کی کیا مدد کر سکتی ہوں؟",
+            here_for_you: "بالکل… میں آپ کے لیے یہیں ہوں۔ ❤️",
+            working_on_it: "جی بالکل، میں آپ کے لیے یہ کر دیتی ہوں۔ ❤️",
+            success": "ہو گیا۔ یہ کام بالکل ٹھیک ہو گیا۔ ❤️"
+        }
+    };
+
     // 🧠 Global Conversational, Admin Overrides, & State Memory Store
     window.nikkiMemory = {
         userName: localStorage.getItem('nikki_user_name') || null,
@@ -42,6 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     window.adminOverrides = JSON.parse(localStorage.getItem('nikki_admin_overrides') || '[]');
     window.currentVoicePersona = localStorage.getItem('nikki_voice_persona') || 'ROMANTIC';
+    window.selectedLanguage = localStorage.getItem('nikki_selected_lang') || 'auto';
     window.lastCalculatedResult = null;
     window.lastResponseText = "";
     let isAdminUnlocked = false;
@@ -51,6 +123,18 @@ document.addEventListener("DOMContentLoaded", () => {
         voicePersonaSelect.addEventListener("change", (e) => {
             window.currentVoicePersona = e.target.value;
             localStorage.setItem('nikki_voice_persona', e.target.value);
+        });
+    }
+
+    if (langSelect) {
+        langSelect.value = window.selectedLanguage;
+        langSelect.addEventListener("change", (e) => {
+            window.selectedLanguage = e.target.value;
+            localStorage.setItem('nikki_selected_lang', e.target.value);
+            const langCode = e.target.value === 'auto' ? 'en' : e.target.value;
+            const dict = MULTILINGUAL_DICTIONARY[langCode] || MULTILINGUAL_DICTIONARY['en'];
+            const titleEl = document.getElementById("greeting-title");
+            if (titleEl) titleEl.innerText = dict.greeting.split(" I'm")[0];
         });
     }
 
@@ -479,6 +563,33 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // 🔍 Auto Language Detector (11 Languages Character & Script Range Check)
+    function detectInputLanguage(text) {
+        if (window.selectedLanguage && window.selectedLanguage !== 'auto') {
+            return window.selectedLanguage;
+        }
+        if (/[\u0900-\u097F]/.test(text)) { // Devanagari Script
+            if (text.includes("आहे") || text.includes("करूया") || text.includes("काय") || text.includes("मला") || text.includes("उद्या") || text.includes("हो") || text.includes("ळ")) {
+                return "mr";
+            }
+            return "hi";
+        }
+        if (/[\u0980-\u09FF]/.test(text)) return "bn"; // Bengali
+        if (/[\u0A80-\u0AFF]/.test(text)) return "gu"; // Gujarati
+        if (/[\u0B80-\u0BFF]/.test(text)) return "ta"; // Tamil
+        if (/[\u0C00-\u0C7F]/.test(text)) return "te"; // Telugu
+        if (/[\u0C80-\u0CFF]/.test(text)) return "kn"; // Kannada
+        if (/[\u0D00-\u0D7F]/.test(text)) return "ml"; // Malayalam
+        if (/[\u0A00-\u0A7F]/.test(text)) return "pa"; // Punjabi
+        if (/[\u0600-\u06FF]/.test(text)) return "ur"; // Urdu
+
+        const lower = text.toLowerCase();
+        if (lower.includes("namaste") || lower.includes("kya") || lower.includes("batao")) return "hi";
+        if (lower.includes("karto") || lower.includes("udya") || lower.includes("tujhyasathi") || lower.includes("nakki")) return "mr";
+
+        return "en";
+    }
+
     // 🌐 Web Search API Integration with DuckDuckGo & Wikipedia Fallback
     async function fetchWebSearchResults(searchQuery) {
         const cleanQuery = searchQuery.replace(/i want information about|information about|tell me about|who is|what is|search the web for|search the web|search meaning of|search meaning|search for|search|meaning of/gi, "").trim();
@@ -528,10 +639,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🔀 Conversational State Memory Intent Router with Priority Admin Overrides
+    // 🔀 Conversational State Memory Intent Router with Code-Switching & Multilingual Support
     async function routeUserIntent(input) {
         const cleanInput = input.trim();
         const lowerInput = cleanInput.toLowerCase();
+        const detectedLang = detectInputLanguage(cleanInput);
+        const dict = MULTILINGUAL_DICTIONARY[detectedLang] || MULTILINGUAL_DICTIONARY['en'];
 
         // 🌟 PRIORITY 0: Check Admin Response Correction Overrides
         if (window.adminOverrides && window.adminOverrides.length > 0) {
@@ -544,36 +657,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- Rule 1: Dynamic Help & Capability Intent ---
         if (lowerInput.includes("how can you help") || lowerInput.includes("what can you do") || lowerInput === "help" || lowerInput === "capabilities") {
-            return `🤖 **Here is what I can do for you:**\n\n` +
+            return `🤖 **Here is what I can do for you (11 Languages Supported):**\n\n` +
                    `• 🧮 **Calculations:** Type math expressions (e.g., \`45 * 12\`, \`15% of 200\`, \`2 into 2\`).\n` +
                    `• 🧠 **Memory:** Tell me facts like *"my name is Swapnil"* or *"my favorite language is JS"*.\n` +
-                   `• 📖 **Information & Search:** Ask for topics (e.g., *"I want information about Dr Babasaheb Ambedkar"* or *"who is APJ Abdul Kalam"*).\n` +
-                   `• 🌐 **URL Summarizer:** Paste any website URL (\`https://...\`) to fetch and summarize page text.\n` +
-                   `• 🌐 **Multilingual:** Use action chips to translate responses to Marathi (मराठी) or Hindi (हिंदी).\n` +
-                   `• ⚙️ **Admin Control:** Click Admin Panel (PIN: \`1805\`) to correct responses and set override rules for next time.\n` +
-                   `• 🔒 **Local Privacy:** All basic interactions run 100% privately directly in your browser GPU!`;
+                   `• 📖 **Information & Search:** Ask for topics in any language (e.g., *"I want information about Dr Babasaheb Ambedkar"*).\n` +
+                   `• 🌐 **Multilingual Code-Switching:** Talk naturally in English, Hindi, Marathi, Bengali, Gujarati, Tamil, Telugu, Kannada, Malayalam, Punjabi, or Urdu!\n` +
+                   `• ⚙️ **Admin Control:** Click Admin Panel (PIN: \`1805\`) to correct responses for next time.\n` +
+                   `• 🔒 **Local Privacy:** All interactions run 100% privately directly in your browser GPU!`;
         }
 
-        // --- Rule 2: Information & Search Intent (Fallback for General Knowledge) ---
+        // --- Rule 2: Information & Search Intent ---
         if (lowerInput.includes("information about") || lowerInput.startsWith("who is") || lowerInput.startsWith("what is") || lowerInput.startsWith("tell me about") || lowerInput.startsWith("search")) {
             return await fetchWebSearchResults(cleanInput);
         }
 
-        // --- Rule 3: Greetings ---
-        if (["hi", "hello", "hey", "hi nikki", "hello nikki"].includes(lowerInput)) {
-            const persona = window.currentVoicePersona || 'ROMANTIC';
-            if (persona === 'ROMANTIC') {
-                const nameStr = window.nikkiMemory.userName ? ` **${window.nikkiMemory.userName}**` : '';
-                return `Good morning${nameStr}... ❤️ I'm Nikki. What would you like to do today?`;
-            } else if (window.nikkiMemory.userName) {
-                return `Hello **${window.nikkiMemory.userName}**! How can I help you today? 😊`;
-            } else {
-                return `Hello! I'm **Nikki 3.6**, your autonomous local AI assistant. What's your name? 😊`;
-            }
+        // --- Rule 3: Multilingual Romantic Greetings ---
+        if (["hi", "hello", "hey", "hi nikki", "hello nikki", "नमस्ते", "नमस्कार", "নমস্কার", "નમસ્તે", "வணக்கம்", "నమస్కారం", "ನಮಸ್ಕಾರ", "നമസ്കാരം", "ਸਤਿ ਸ਼੍ਰੀ ਅਕਾਲ", "آداب"].some(g => lowerInput.includes(g))) {
+            return dict.greeting;
         }
 
         // --- Rule 4: Memory Intent ("my name is...") ---
-        const nameMatch = lowerInput.match(/(?:my name is|i am|call me)\s+([a-zA-Z]+)/i);
+        const nameMatch = lowerInput.match(/(?:my name is|i am|call me|मेरा नाम|माझे नाव)\s+([a-zA-Z\u0900-\u097F]+)/i);
         if (nameMatch) {
             const extractedName = nameMatch[1];
             const formattedName = extractedName.charAt(0).toUpperCase() + extractedName.slice(1).toLowerCase();
@@ -588,15 +692,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 }).catch(() => {});
             } catch(e){}
 
-            const persona = window.currentVoicePersona || 'ROMANTIC';
-            if (persona === 'ROMANTIC') {
-                return `Nice to meet you, **${formattedName}**... I will remember your name forever. ❤️`;
-            }
-            return `Nice to meet you, **${formattedName}**! I will remember your name. 💖`;
+            return dict.here_for_you.replace("for you", `for you, **${formattedName}**`);
         }
 
         // --- Rule 5: Memory Recall ("what is my name") ---
-        if (lowerInput.includes("what is my name") || lowerInput.includes("who am i") || lowerInput.includes("do you know my name")) {
+        if (lowerInput.includes("what is my name") || lowerInput.includes("who am i") || lowerInput.includes("do you know my name") || lowerInput.includes("मेरा नाम क्या है") || lowerInput.includes("माझे नाव काय आहे")) {
             if (window.nikkiMemory.userName) {
                 return `Your name is **${window.nikkiMemory.userName}**! ✨`;
             } else {
@@ -604,9 +704,9 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // --- Rule 6: Self-Identity ("what is your name") ---
-        if (lowerInput.includes("what is your name") || lowerInput.includes("who are you")) {
-            return `I am **Nikki 3.6 Pro**, your autonomous local AI engine running directly on your device! 🤖✨`;
+        // --- Rule 6: Self-Identity ---
+        if (lowerInput.includes("what is your name") || lowerInput.includes("who are you") || lowerInput.includes("तुम्हारा नाम क्या है") || lowerInput.includes("तुझे नाव काय आहे")) {
+            return `I am **Nikki 3.6 Pro**, your autonomous 11-language local AI companion! 🤖✨`;
         }
 
         // --- Rule 7: Fast Math Expressions ---
@@ -910,7 +1010,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (el) el.remove();
     }
 
-    // 🎙️ Speech Synthesis with Female Persona Inflection Parameters
+    // 🎙️ Speech Synthesis with Multilingual Locales & Female Persona Inflection Parameters
     function speakOutLoud(text) {
         if (synth) {
             isSpeaking = true;
@@ -924,8 +1024,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Configure Voice Inflection Parameters
             if (persona === 'ROMANTIC') {
-                utterance.pitch = 1.2;  // Medium-high natural pitch
-                utterance.rate = 0.88;  // Slightly slow & relaxed speed
+                utterance.pitch = 1.2;  // Medium-high natural female
+                utterance.rate = 0.88;  // Slightly slow & relaxed
             } else if (persona === 'FRIENDLY') {
                 utterance.pitch = 1.1;
                 utterance.rate = 0.95;
@@ -940,9 +1040,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 utterance.rate = 1.0;
             }
 
-            // Select Female Voice (Indian English / Hindi / Marathi preference)
+            // Set Speech Language Locale
+            const detectedLang = detectInputLanguage(cleanText);
+            const langLocales = {
+                "hi": "hi-IN", "mr": "mr-IN", "bn": "bn-IN", "gu": "gu-IN",
+                "ta": "ta-IN", "te": "te-IN", "kn": "kn-IN", "ml": "ml-IN",
+                "pa": "pa-IN", "ur": "ur-IN", "en": "en-IN"
+            };
+            utterance.lang = langLocales[detectedLang] || "en-IN";
+
+            // Select Female Voice
             const voices = synth.getVoices();
-            const femaleVoice = voices.find(v => (v.name.includes("Female") || v.name.includes("Heera") || v.name.includes("Zira") || v.name.includes("Google") || v.lang.includes("en-IN") || v.lang.includes("hi-IN")));
+            const femaleVoice = voices.find(v => (v.lang.includes(utterance.lang) || v.name.includes("Female") || v.name.includes("Heera") || v.name.includes("Google") || v.name.includes("Zira")));
             if (femaleVoice) {
                 utterance.voice = femaleVoice;
             }

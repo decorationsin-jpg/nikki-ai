@@ -34,6 +34,22 @@
                 <span>RAM: <strong id="telemetry-ram">38%</strong></span>
             </div>
 
+            <!-- 11-Language Selector -->
+            <select id="lang-select" class="theme-selector" style="border-color: rgba(66, 133, 244, 0.4); color: #4285f4;" title="Language Engine (11 Languages)">
+                <option value="auto">🌐 Auto Detect Language</option>
+                <option value="en">English (en-IN)</option>
+                <option value="hi">Hindi (हिंदी)</option>
+                <option value="mr">Marathi (मराठी)</option>
+                <option value="bn">Bengali (বাংলা)</option>
+                <option value="gu">Gujarati (ગુજરાતી)</option>
+                <option value="ta">Tamil (தமிழ்)</option>
+                <option value="te">Telugu (తెలుగు)</option>
+                <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                <option value="ml">Malayalam (മലയാളം)</option>
+                <option value="pa">Punjabi (ਪੰਜਾਬੀ)</option>
+                <option value="ur">Urdu (اردو)</option>
+            </select>
+
             <!-- Voice Persona Selector -->
             <select id="voice-persona-select" class="theme-selector" style="border-color: rgba(233, 30, 99, 0.4); color: #e91e63;" title="Voice Persona & Emotion Style">
                 <option value="ROMANTIC">💗 Warm & Romantic Voice</option>
@@ -84,8 +100,8 @@
         <div class="chat-scroll-area" id="chat-scroll">
             <!-- Empty State Greeting -->
             <div class="empty-state" id="empty-state">
-                <h1 class="greeting-text">Good morning... ❤️</h1>
-                <h2 class="sub-greeting">I'm Nikki. What would you like to do today?</h2>
+                <h1 class="greeting-text" id="greeting-title">Good morning... ❤️</h1>
+                <h2 class="sub-greeting" id="greeting-subtitle">I'm Nikki. What would you like to do today?</h2>
 
                 <!-- Suggestion Chips Grid -->
                 <div class="suggestions-grid">
