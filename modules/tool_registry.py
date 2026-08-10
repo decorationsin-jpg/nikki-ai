@@ -25,6 +25,7 @@ from modules.emotional_voice import EmotionalVoiceEngine
 from modules.android_termux_engine import AndroidTermuxEngine
 from modules.master_assistant_hub import MasterAssistantHub
 from modules.trilingual_engine import TrilingualEngine
+from modules.responsible_ai import ResponsibleAIEngine
 
 class ToolRegistry:
     def __init__(self):
@@ -51,6 +52,7 @@ class ToolRegistry:
         self.termux = AndroidTermuxEngine()
         self.hub = MasterAssistantHub()
         self.tri_lang = TrilingualEngine()
+        self.resp_ai = ResponsibleAIEngine()
 
     def get_tool_descriptions(self) -> str:
         return """
@@ -114,6 +116,7 @@ Available Tools:
 57. run_voice_routine(routine_name): Execute Alexa-style smart voice routine ('good night', 'good morning', 'lockdown', 'study').
 58. detect_language(text): Detect whether user text/voice is English, Hindi (हिंदी), or Marathi (मराठी).
 59. speak_trilingual(text, language): Speak out loud in English, Hindi (हिंदी), or Marathi (मराठी).
+60. rag_query(query): Perform Retrieval-Augmented Generation (RAG) with source citations, confidence scoring, and anti-hallucination guardrails.
 """
 
     def execute_tool(self, tool_name: str, **kwargs) -> str:
@@ -245,6 +248,8 @@ Available Tools:
                 return self.tri_lang.detect_language(kwargs.get("text", ""))
             elif tool_name == "speak_trilingual":
                 return self.tri_lang.speak_trilingual(kwargs.get("text", ""), kwargs.get("language", "english"))
+            elif tool_name == "rag_query":
+                return str(self.resp_ai.rag_query(kwargs.get("query", "")))
             else:
                 return f"Error: Unknown tool '{tool_name}'"
         except Exception as e:
