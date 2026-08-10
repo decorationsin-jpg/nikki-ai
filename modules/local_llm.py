@@ -1,11 +1,17 @@
+"""
+Local LLM Interface Module for Nikki.
+Executes 100% local model inference via Ollama or LM Studio without third-party API keys.
+Includes model auto-discovery and intelligent fallback handling.
+"""
 import json
 import urllib.request
 import urllib.error
+from typing import Optional, List
 
 class LocalLLM:
     """
-    Interface for running LLM inference 100% locally using Ollama or LM Studio.
-    Requires NO API keys and can run entirely offline.
+    Zero-API Key Local LLM Interface.
+    Runs 100% locally on user hardware.
     """
 
     def __init__(self, model_name: str = "llama3.2", host: str = "http://localhost:11434"):
@@ -13,7 +19,7 @@ class LocalLLM:
         self.host = host.rstrip('/')
 
     def is_available(self) -> bool:
-        """Checks if local Ollama server is running."""
+        """Checks if the local Ollama server is running."""
         try:
             req = urllib.request.Request(f"{self.host}/api/tags")
             with urllib.request.urlopen(req, timeout=2) as response:
@@ -21,14 +27,22 @@ class LocalLLM:
         except Exception:
             return False
 
-    def generate(self, prompt: str, system_prompt: str = None) -> str:
-        """
-        Generates text completion using local Ollama instance.
-        """
+    def list_local_models(self) -> List[str]:
+        """Lists all AI models installed on the local Ollama instance."""
+        try:
+            req = urllib.request.Request(f"{self.host}/api/tags")
+            with urllib.request.urlopen(req, timeout=3) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                return [m.get("name") for m in data.get("models", [])]
+        except Exception:
+            return []
+
+    def generate(self, prompt: str, system_prompt: Optional[str] = None) -> str:
+        """Generates text completion from local LLM."""
         if not self.is_available():
             return (
-                "[Offline Rule Fallback]: Ollama server is not running at http://localhost:11434.\n"
-                "Please run `ollama run llama3.2` in your terminal to start the local LLM brain!"
+                "[Offline Rule Engine Active]: Local Ollama server is not running.\n"
+                "Please run `ollama run llama3.2` to enable full local LLM brain capabilities!"
             )
 
         url = f"{self.host}/api/generate"
@@ -48,4 +62,4 @@ class LocalLLM:
                 result = json.loads(response.read().decode('utf-8'))
                 return result.get("response", "")
         except urllib.error.URLError as e:
-            return f"Error communicating with local LLM: {e}"
+            return f"Error communicating with local LLM: {str(e)}"
