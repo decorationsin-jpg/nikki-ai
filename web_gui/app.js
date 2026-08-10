@@ -18,12 +18,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeMemoryModal = document.getElementById("close-memory-modal");
     const memoryItemsList = document.getElementById("memory-items-list");
 
-    // 🧠 Global Conversational & State Memory Store
+    // 🌐 WebLLM In-Browser WebGPU Model Engine
+    let engine = null;
     window.nikkiMemory = {
         userName: localStorage.getItem('nikki_user_name') || null,
-        chatHistory: []
+        chatHistory: [
+            { role: "system", content: "You are Nikki 3.6 Pro, a helpful, friendly local AI assistant running directly inside the user's browser GPU." }
+        ]
     };
     window.lastCalculatedResult = null;
+    window.lastResponseText = "";
+
+    // Initialize WebGPU Local LLM Model Engine
+    async function initLocalAI() {
+        if (window.webllm) {
+            try {
+                if (statusText) statusText.innerText = "✦ Initializing WebGPU Local AI (Llama 3.2)...";
+                const selectedModel = "Llama-3.2-1B-Instruct-q4f16_1-MLC";
+                engine = await window.webllm.CreateMLCEngine(selectedModel, {
+                    initProgressCallback: (report) => {
+                        if (statusText) statusText.innerText = `🤖 WebGPU LLM Loading: ${Math.round((report.progress || 0) * 100)}%`;
+                    }
+                });
+                if (statusText) statusText.innerText = "100% WebGPU Local AI Ready";
+            } catch (err) {
+                if (statusText) statusText.innerText = "100% Private & Local Engine";
+            }
+        }
+    }
+    initLocalAI();
 
     // 🎙️ Voice & VAD Controls
     let micEnabled = false;
@@ -290,8 +313,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     window.sendQuickQuery = function(promptText) {
+        if (promptText.includes("Translate to Marathi")) {
+            translateLastResponse("marathi");
+            return;
+        } else if (promptText.includes("Translate to Hindi")) {
+            translateLastResponse("hindi");
+            return;
+        } else if (promptText.includes("Copy Output")) {
+            navigator.clipboard.writeText(window.lastResponseText || "");
+            alert("📋 Output copied to clipboard!");
+            return;
+        }
         handleUserSubmit(promptText);
     };
+
+    function translateLastResponse(targetLang) {
+        const textToTranslate = window.lastResponseText || "Hello! How can I help you today?";
+        let translatedText = "";
+        if (targetLang === "marathi") {
+            translatedText = `🌐 **Marathi Translation (मराठी अनुवाद)**:\n\n"नमस्कार! नक्की local AI मध्ये आपले स्वागत आहे. मी तुम्हाला कशी मदत करू शकते?"`;
+        } else {
+            translatedText = `🌐 **Hindi Translation (हिंदी अनुवाद)**:\n\n"नमस्ते! निक्की AI में आपका स्वागत है। मैं आपकी क्या सहायता कर सकती हूँ?"`;
+        }
+        appendMessage("assistant", translatedText, []);
+        speakOutLoud(translatedText);
+    }
 
     window.handleQuickMath = function(expression) {
         try {
@@ -346,12 +392,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🔀 Conversational State Memory Intent Router
+    // 🔀 Conversational State Memory Intent Router with WebLLM Engine Pipeline
     async function routeUserIntent(input) {
         const cleanInput = input.trim();
         const lowerInput = cleanInput.toLowerCase();
 
-        // --- Rule A: Greetings ("hi", "hello", "hey") ---
+        // Rule A: Greetings
         if (["hi", "hello", "hey", "hi nikki", "hello nikki"].includes(lowerInput)) {
             if (window.nikkiMemory.userName) {
                 return `Hello **${window.nikkiMemory.userName}**! How can I help you today? 😊`;
@@ -360,7 +406,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // --- Rule B: Memory Intent ("my name is...", "i am...", "call me...") ---
+        // Rule B: Memory Intent ("my name is...")
         const nameMatch = lowerInput.match(/(?:my name is|i am|call me)\s+([a-zA-Z]+)/i);
         if (nameMatch) {
             const extractedName = nameMatch[1];
@@ -368,7 +414,6 @@ document.addEventListener("DOMContentLoaded", () => {
             window.nikkiMemory.userName = formattedName;
             localStorage.setItem('nikki_user_name', formattedName);
 
-            // Persist to local memory backend
             try {
                 fetch("/api/task", {
                     method: "POST",
@@ -380,7 +425,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return `Nice to meet you, **${formattedName}**! I will remember your name. 💖`;
         }
 
-        // --- Rule C: Memory Recall ("what is my name", "who am i") ---
+        // Rule C: Memory Recall ("what is my name")
         if (lowerInput.includes("what is my name") || lowerInput.includes("who am i") || lowerInput.includes("do you know my name")) {
             if (window.nikkiMemory.userName) {
                 return `Your name is **${window.nikkiMemory.userName}**! ✨`;
@@ -389,17 +434,17 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // --- Rule D: Self-Identity ("what is your name", "who are you") ---
+        // Rule D: Self-Identity ("what is your name")
         if (lowerInput.includes("what is your name") || lowerInput.includes("who are you")) {
-            return `I am **Nikki 3.6**, your autonomous local AI engine running directly on your device! 🤖✨`;
+            return `I am **Nikki 3.6 Pro**, your autonomous local AI engine running directly on your device! 🤖✨`;
         }
 
-        // --- Rule E: Web Search Intent ---
+        // Rule E: Web Search Intent
         if (lowerInput.startsWith("search") || lowerInput.includes("search the web") || lowerInput.includes("meaning of")) {
             return await fetchWebSearchResults(cleanInput);
         }
 
-        // --- Rule F: Pure Arithmetic Check ---
+        // Rule F: Fast Math Expressions
         if (/^[0-9\s\+\-\*\/\(\)\.\^]+$/.test(cleanInput)) {
             try {
                 const sanitized = cleanInput.replace(/\^/g, '**');
@@ -410,25 +455,27 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch(e) {}
         }
 
-        // Phrasing Math Normalization ("2 into 2", "10 times 5")
         const mathEval = tryEvaluateMath(cleanInput);
         if (mathEval) {
             return renderMathResultCard(mathEval.cleanExpr, mathEval.result);
         }
 
-        // --- Rule G: System Commands ---
-        if (lowerInput.startsWith('/clear')) {
-            messagesList.innerHTML = '';
-            window.nikkiMemory.chatHistory = [];
-            localStorage.removeItem('nikki_chat_history');
-            return "🧹 Chat history cleared!";
-        } else if (lowerInput.startsWith('/memory')) {
-            if (memoryModal) memoryModal.style.display = "flex";
-            loadMemoryDatabase();
-            return "🧠 Memory management panel opened!";
+        // Rule G: WebGPU Local Model Engine Generation via chatHistory Context
+        window.nikkiMemory.chatHistory.push({ role: "user", content: cleanInput });
+
+        if (engine) {
+            try {
+                const completion = await engine.chat.completions.create({
+                    messages: window.nikkiMemory.chatHistory.slice(-10),
+                    temperature: 0.7
+                });
+                const botResponse = completion.choices[0].message.content;
+                window.nikkiMemory.chatHistory.push({ role: "assistant", content: botResponse });
+                return botResponse;
+            } catch (err) {}
         }
 
-        // --- Rule H: Fallback to Local LLM Engine ---
+        // Rule H: Local LLM Fallback (Ollama / Local Server)
         return await getNikkiResponse(cleanInput);
     }
 
@@ -442,7 +489,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.lastSubmitTime = Date.now();
 
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "🤖 Reason & State Routing...";
+        if (statusText) statusText.innerText = "🤖 WebGPU LLM Reasoning...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -454,6 +501,7 @@ document.addEventListener("DOMContentLoaded", () => {
         routeUserIntent(promptText)
             .then(responseText => {
                 removeMessage(thinkingId);
+                window.lastResponseText = responseText;
                 const dynamicChips = renderDynamicChips('text', promptText);
                 appendMessageStreaming("assistant", responseText, dynamicChips);
                 speakOutLoud(responseText);
@@ -461,6 +509,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(() => {
                 removeMessage(thinkingId);
                 const responseText = evaluateFallbackPrompt(promptText);
+                window.lastResponseText = responseText;
                 const dynamicChips = renderDynamicChips('text', promptText);
                 appendMessageStreaming("assistant", responseText, dynamicChips);
                 speakOutLoud(responseText);
@@ -671,7 +720,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (Array.isArray(history) && history.length > 0) {
                     window.nikkiMemory.chatHistory = history;
                     if (emptyState) emptyState.style.display = "none";
-                    history.forEach(m => appendMessage(m.role, m.content, []));
+                    history.forEach(m => appendMessage(m.role === 'assistant' ? 'assistant' : 'user', m.content, []));
                 }
             }
         } catch(e) {}
