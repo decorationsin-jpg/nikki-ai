@@ -1,14 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const chatMessages = document.getElementById("chat-messages");
+    const messagesList = document.getElementById("messages-list");
+    const emptyState = document.getElementById("empty-state");
     const chatForm = document.getElementById("chat-form");
     const userInput = document.getElementById("user-input");
     const micBtn = document.getElementById("mic-btn");
-    const voiceStatus = document.getElementById("voice-status");
+    const chatScroll = document.getElementById("chat-scroll");
 
-    // Browser Speech Synthesis
+    // Speech Synthesis & Recognition
     const synth = window.speechSynthesis;
-
-    // Speech Recognition
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     let recognition = null;
 
@@ -18,27 +17,18 @@ document.addEventListener("DOMContentLoaded", () => {
         recognition.interimResults = false;
 
         recognition.onstart = () => {
-            voiceStatus.innerText = "🎙️ Listening to your voice...";
-            micBtn.style.boxShadow = "0 0 40px #00f2fe";
+            micBtn.style.color = "#4285f4";
         };
 
         recognition.onresult = (event) => {
             const transcript = event.results[0][0].transcript;
             userInput.value = transcript;
-            handleUserMessage(transcript);
-        };
-
-        recognition.onerror = (e) => {
-            voiceStatus.innerText = "Error listening to voice.";
-            micBtn.style.boxShadow = "0 0 20px rgba(157, 78, 221, 0.5)";
+            handleUserSubmit(transcript);
         };
 
         recognition.onend = () => {
-            voiceStatus.innerText = "Tap microphone to speak to Nikki";
-            micBtn.style.boxShadow = "0 0 20px rgba(157, 78, 221, 0.5)";
+            micBtn.style.color = "";
         };
-    } else {
-        voiceStatus.innerText = "Speech recognition not supported in this browser.";
     }
 
     micBtn.addEventListener("click", () => {
@@ -51,39 +41,83 @@ document.addEventListener("DOMContentLoaded", () => {
         e.preventDefault();
         const text = userInput.value.trim();
         if (text) {
-            handleUserMessage(text);
+            handleUserSubmit(text);
             userInput.value = "";
         }
     });
 
-    function appendMessage(sender, text, type) {
-        const msgDiv = document.createElement("div");
-        msgDiv.classList.add("message", type);
-        msgDiv.innerHTML = `<span class="sender">${sender}</span><p>${escapeHtml(text)}</p>`;
-        chatMessages.appendChild(msgDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+    window.sendQuickPrompt = function(promptText) {
+        handleUserSubmit(promptText);
+    };
 
-    function handleUserMessage(text) {
-        appendMessage("You", text, "user");
+    function handleUserSubmit(promptText) {
+        if (emptyState) {
+            emptyState.style.display = "none";
+        }
 
-        // Send to Nikki's backend API
+        // Add User Message
+        appendMessage("user", promptText);
+
+        // Add Thinking Indicator
+        const thinkingId = appendThinkingIndicator();
+
+        // Send to Local API
         fetch("/api/task", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ goal: text })
+            body: JSON.stringify({ goal: promptText })
         })
         .then(res => res.json())
         .then(data => {
+            removeMessage(thinkingId);
             const responseText = data.response || "Task processed by Nikki.";
-            appendMessage("Nikki 🌸", responseText, "assistant");
+            appendMessage("assistant", responseText);
             speakOutLoud(responseText);
         })
         .catch(err => {
-            const fallbackText = `Nikki received your task: "${text}". Running local offline execution engine.`;
-            appendMessage("Nikki 🌸", fallbackText, "assistant");
+            removeMessage(thinkingId);
+            const fallbackText = `Nikki processed your request: "${promptText}". Running offline engine.`;
+            appendMessage("assistant", fallbackText);
             speakOutLoud(fallbackText);
         });
+    }
+
+    function appendMessage(sender, text) {
+        const row = document.createElement("div");
+        row.classList.add("msg-row", sender);
+
+        if (sender === "assistant") {
+            row.innerHTML = `
+                <div class="msg-avatar sparkle-avatar">✦</div>
+                <div class="msg-content">${formatMarkdown(text)}</div>
+            `;
+        } else {
+            row.innerHTML = `
+                <div class="msg-content">${escapeHtml(text)}</div>
+            `;
+        }
+
+        messagesList.appendChild(row);
+        chatScroll.scrollTop = chatScroll.scrollHeight;
+    }
+
+    function appendThinkingIndicator() {
+        const id = "thinking-" + Date.now();
+        const row = document.createElement("div");
+        row.id = id;
+        row.classList.add("msg-row", "assistant");
+        row.innerHTML = `
+            <div class="msg-avatar sparkle-avatar">✦</div>
+            <div class="msg-content"><p><em>Nikki is reasoning and executing tools...</em></p></div>
+        `;
+        messagesList.appendChild(row);
+        chatScroll.scrollTop = chatScroll.scrollHeight;
+        return id;
+    }
+
+    function removeMessage(id) {
+        const el = document.getElementById(id);
+        if (el) el.remove();
     }
 
     function speakOutLoud(text) {
@@ -93,6 +127,17 @@ document.addEventListener("DOMContentLoaded", () => {
             utterance.rate = 1.0;
             synth.speak(utterance);
         }
+    }
+
+    function formatMarkdown(text) {
+        let html = escapeHtml(text);
+        // Code Blocks
+        html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+        // Bold
+        html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        // Line breaks
+        html = html.replace(/\n/g, '<br>');
+        return html;
     }
 
     function escapeHtml(text) {

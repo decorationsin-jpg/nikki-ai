@@ -3,98 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nikki - Autonomous Local AI Assistant</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <title>Nikki 3.6 Pro - Autonomous Local AI</title>
+    <link rel="stylesheet" href="web_gui/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0e0f12">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="logo">
-                <span class="sparkle">🌸</span>
-                <h1>NIKKI</h1>
-                <span class="badge">LOCAL AI 24/7</span>
+    <!-- Top Navbar -->
+    <header class="gemini-header">
+        <div class="brand">
+            <span class="gemini-sparkle">✦</span>
+            <span class="brand-title">Nikki</span>
+            <span class="model-badge">3.6 Pro Local</span>
+        </div>
+        <div class="header-right">
+            <div class="status-tag">
+                <span class="status-dot"></span>
+                <span>100% Private & Active 24/7</span>
             </div>
-            <div class="status-indicator">
-                <span class="dot active"></span>
-                <span id="status-text">Nikki is Active & Learning 24/7</span>
-            </div>
-        </header>
+        </div>
+    </header>
 
-        <!-- Main Dashboard -->
-        <main class="main-content">
-            <!-- Left Side: Face Avatar & Voice Control -->
-            <section class="avatar-section">
-                <div class="avatar-wrapper">
-                    <div class="sound-wave-ring ring-1"></div>
-                    <div class="sound-wave-ring ring-2"></div>
-                    <div class="avatar-frame">
-                        <img src="../assets/nikki_avatar.jpg" alt="Nikki Face Avatar" id="nikki-avatar">
+    <!-- Main Content Container -->
+    <div class="main-wrapper">
+        <!-- Chat Scroll Area -->
+        <div class="chat-scroll-area" id="chat-scroll">
+            <!-- Empty State Greeting -->
+            <div class="empty-state" id="empty-state">
+                <h1 class="greeting-text">Hello, Friend</h1>
+                <h2 class="sub-greeting">How can Nikki help you today?</h2>
+
+                <!-- Suggestion Chips Grid -->
+                <div class="suggestions-grid">
+                    <div class="suggestion-card" onclick="sendQuickPrompt('Audit system security and scan firewall status')">
+                        <p>Audit system security & scan active firewall status</p>
+                        <span class="suggestion-icon">🛡️</span>
+                    </div>
+                    <div class="suggestion-card" onclick="sendQuickPrompt('Explain quantum computing principles with easy analogies')">
+                        <p>Explain quantum computing principles with easy analogies</p>
+                        <span class="suggestion-icon">📚</span>
+                    </div>
+                    <div class="suggestion-card" onclick="sendQuickPrompt('Write a python script to automate file organization')">
+                        <p>Write a python script to automate file organization</p>
+                        <span class="suggestion-icon">💻</span>
+                    </div>
+                    <div class="suggestion-card" onclick="sendQuickPrompt('Check my IP camera status and capture a snapshot')">
+                        <p>Check my IP camera status & capture a live snapshot</p>
+                        <span class="suggestion-icon">🎥</span>
                     </div>
                 </div>
+            </div>
 
-                <div class="voice-controls">
-                    <button id="mic-btn" class="mic-button">
-                        <svg class="mic-icon" viewBox="0 0 24 24" width="28" height="28">
-                            <path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+            <!-- Dynamic Chat Messages Container -->
+            <div id="messages-list"></div>
+        </div>
+
+        <!-- Floating Input Container at Bottom -->
+        <div class="input-floating-container">
+            <form id="chat-form" class="input-row">
+                <input type="text" id="user-input" class="gemini-input" placeholder="Ask Nikki anything or type a command..." autocomplete="off">
+                
+                <div class="input-actions">
+                    <button type="button" id="mic-btn" class="action-btn" title="Voice Input">
+                        <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
                         </svg>
                     </button>
-                    <p id="voice-status" class="voice-status">Tap microphone to speak to Nikki</p>
+                    <button type="submit" id="send-btn" class="action-btn send-action-btn" title="Send Task">
+                        <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                            <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                        </svg>
+                    </button>
                 </div>
-            </section>
-
-            <!-- Right Side: Chat & Capabilities Panel -->
-            <section class="panel-section">
-                <!-- System Capability Cards -->
-                <div class="status-cards">
-                    <div class="card">
-                        <span class="card-icon">🧠</span>
-                        <div>
-                            <h4>Local Brain</h4>
-                            <p id="brain-status">Ollama / Llama 3.2 (Zero API)</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <span class="card-icon">📱</span>
-                        <div>
-                            <h4>Android Access</h4>
-                            <p id="android-status">ADB & Termux Ready</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <span class="card-icon">🎥</span>
-                        <div>
-                            <h4>IP Camera</h4>
-                            <p id="cam-status">RTSP / HTTP Stream Live</p>
-                        </div>
-                    </div>
-                    <div class="card">
-                        <span class="card-icon">🧬</span>
-                        <div>
-                            <h4>Self-Modifying</h4>
-                            <p id="self-status">Auto-Programs Skills</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Chat Box -->
-                <div class="chat-container">
-                    <div class="chat-messages" id="chat-messages">
-                        <div class="message assistant">
-                            <span class="sender">Nikki 🌸</span>
-                            <p>Hello! I am Nikki, your 100% private local AI assistant. Type a command or click the microphone to speak with me!</p>
-                        </div>
-                    </div>
-
-                    <form id="chat-form" class="chat-input-form">
-                        <input type="text" id="user-input" placeholder="Give Nikki any task or question..." autocomplete="off">
-                        <button type="submit" class="send-btn">Send</button>
-                    </form>
-                </div>
-            </section>
-        </main>
+            </form>
+            <div class="disclaimer">Nikki is 100% private. All tasks, voice audio, and memory run locally on your device without third-party APIs.</div>
+        </div>
     </div>
-    <script src="app.js"></script>
+
+    <script src="web_gui/app.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log(err));
+        }
+    </script>
 </body>
 </html>
