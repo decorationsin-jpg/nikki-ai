@@ -17,15 +17,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeMemoryModal = document.getElementById("close-memory-modal");
     const memoryItemsList = document.getElementById("memory-items-list");
 
-    // Audio & VAD Controls
-    let isMuted = false;
+    // Audio & Voice Activity Detection (VAD) Controls
+    let isListening = false;
     let isSpeaking = false;
     let currentState = "IDLE";
     let lastProcessedPrompt = "";
     let audioCtx = null;
     let analyser = null;
     let micStream = null;
-    let vadInterval = null;
 
     // Speech Recognition & Synthesis
     const synth = window.speechSynthesis;
@@ -136,8 +135,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     analyser.fftSize = 256;
 
                     const dataArray = new Uint8Array(analyser.frequencyBinCount);
-                    vadInterval = setInterval(() => {
-                        if (isMuted || isSpeaking) return;
+                    setInterval(() => {
+                        if (!isListening || isSpeaking) return;
                         analyser.getByteFrequencyData(dataArray);
                         let sum = 0;
                         for (let i = 0; i < dataArray.length; i++) {
@@ -157,20 +156,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     initVAD();
 
-    // Toggle Mute / Push-to-Talk Pill
+    // Toggle Push-to-Talk Toggle Button
     if (contMicPill) {
         contMicPill.addEventListener("click", () => {
-            isMuted = !isMuted;
-            if (isMuted) {
-                contMicPill.classList.add("off");
-                contMicPill.innerHTML = `<span>🔇 Mic Muted</span>`;
-                stopListening();
-            } else {
-                contMicPill.classList.remove("off");
-                contMicPill.innerHTML = `<span>🎙️ Mic Unmuted (VAD Active)</span>`;
-                startListening();
-            }
+            toggleMic();
         });
+    }
+
+    function toggleMic() {
+        if (!isListening) {
+            startListening();
+            isListening = true;
+            if (contMicPill) {
+                contMicPill.classList.remove("off");
+                contMicPill.innerHTML = `<span>🎙️ Listening...</span>`;
+            }
+        } else {
+            stopListening();
+            isListening = false;
+            if (contMicPill) {
+                contMicPill.classList.add("off");
+                contMicPill.innerHTML = `<span>🔇 Mic Off</span>`;
+            }
+        }
     }
 
     // Memory Management Modal Control
@@ -233,7 +241,7 @@ document.addEventListener("DOMContentLoaded", () => {
         recognition.interimResults = false;
 
         recognition.onstart = () => {
-            if (isSpeaking || isMuted) {
+            if (isSpeaking) {
                 stopListening();
                 return;
             }
@@ -243,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         recognition.onresult = (event) => {
-            if (isSpeaking || isMuted) return;
+            if (isSpeaking) return;
             let transcript = event.results[0][0].transcript.trim();
             if (transcript.toLowerCase().includes("hey nikki") || transcript.toLowerCase().includes("nikki")) {
                 transcript = transcript.replace(/hey nikki/gi, "").replace(/nikki/gi, "").trim();
@@ -258,6 +266,7 @@ document.addEventListener("DOMContentLoaded", () => {
         recognition.onerror = () => {
             currentState = "IDLE";
             micBtn.classList.remove("listening");
+            isListening = false;
         };
 
         recognition.onend = () => {
@@ -265,12 +274,13 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!isSpeaking) {
                 currentState = "IDLE";
                 if (statusText) statusText.innerText = "100% Private & Local";
+                isListening = false;
             }
         };
     }
 
     function startListening() {
-        if (recognition && !isSpeaking && !isMuted) {
+        if (recognition && !isSpeaking) {
             try {
                 recognition.start();
             } catch (e) {}
@@ -286,14 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     micBtn.addEventListener("click", () => {
-        if (isMuted) {
-            isMuted = false;
-            if (contMicPill) {
-                contMicPill.classList.remove("off");
-                contMicPill.innerHTML = `<span>🎙️ Mic Unmuted</span>`;
-            }
-        }
-        startListening();
+        toggleMic();
     });
 
     chatForm.addEventListener("submit", (e) => {
@@ -320,7 +323,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.lastSubmitTime = Date.now();
 
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "🤖 Evaluating Query...";
+        if (statusText) statusText.innerText = "🤖 Evaluating via Ollama Llama3.2...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -329,70 +332,114 @@ document.addEventListener("DOMContentLoaded", () => {
         appendMessage("user", promptText);
         const thinkingId = appendThinkingIndicator();
 
-        fetch("http://localhost:11434/api/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model: "llama3.2",
-                prompt: promptText,
-                stream: false
-            })
-        })
-        .then(res => res.json())
-        .then(ollamaData => {
+        // Step 1: Pre-process Math Input ("2 into 2" -> "2 * 2")
+        const mathResult = tryEvaluateMath(promptText);
+        if (mathResult) {
             removeMessage(thinkingId);
-            const responseText = ollamaData.response || evaluateWithFlexibleMathParser(promptText);
-            const dynamicChips = generateDynamicContextChips(responseText);
-            appendMessage("assistant", responseText, dynamicChips);
-            speakOutLoud(responseText);
-        })
-        .catch(err => {
-            fetch("/api/task", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ goal: promptText })
-            })
-            .then(res => res.json())
-            .then(data => {
+            const dynamicChips = renderDynamicChips('math', promptText);
+            appendMessage("assistant", mathResult, dynamicChips);
+            speakOutLoud(mathResult);
+            return;
+        }
+
+        // Step 2: Local Ollama LLM REST API Call (http://localhost:11434/api/generate)
+        getNikkiResponse(promptText)
+            .then(responseText => {
                 removeMessage(thinkingId);
-                const responseText = data.response || evaluateWithFlexibleMathParser(promptText);
-                const dynamicChips = generateDynamicContextChips(responseText);
+                const dynamicChips = renderDynamicChips('text', promptText);
                 appendMessage("assistant", responseText, dynamicChips);
                 speakOutLoud(responseText);
             })
             .catch(() => {
                 removeMessage(thinkingId);
-                const responseText = evaluateWithFlexibleMathParser(promptText);
-                const dynamicChips = generateDynamicContextChips(responseText);
+                const responseText = evaluateFallbackPrompt(promptText);
+                const dynamicChips = renderDynamicChips('text', promptText);
                 appendMessage("assistant", responseText, dynamicChips);
                 speakOutLoud(responseText);
             });
-        });
     }
 
-    function evaluateWithFlexibleMathParser(prompt) {
-        const cleanPrompt = prompt.trim();
-        const lower = cleanPrompt.toLowerCase();
-
+    // Connect Frontend JS to Local LLM API (Ollama http://localhost:11434/api/generate)
+    async function getNikkiResponse(userPrompt) {
         try {
-            const mathCandidate = cleanPrompt.replace(/[a-zA-Z\?\,\!\=\:\_]/g, '').trim();
-            if (mathCandidate && mathCandidate.length >= 3 && /[\+\-\*\/\%\^]/.test(mathCandidate)) {
-                const sanitized = mathCandidate.replace(/\^/g, '**');
+            const response = await fetch('http://localhost:11434/api/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'llama3.2', // or phi3 / qwen
+                    prompt: userPrompt,
+                    stream: false
+                })
+            });
+            const data = await response.json();
+            return data.response || evaluateFallbackPrompt(userPrompt);
+        } catch (error) {
+            // Local Web Server Fallback
+            try {
+                const res = await fetch("/api/task", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ goal: userPrompt })
+                });
+                const data = await res.json();
+                return data.response || evaluateFallbackPrompt(userPrompt);
+            } catch (err) {
+                return evaluateFallbackPrompt(userPrompt);
+            }
+        }
+    }
+
+    // Dynamic Math Evaluator (Normalizes phrasing like "2 into 2" to "2 * 2")
+    function tryEvaluateMath(input) {
+        try {
+            let cleanInput = input
+                .toLowerCase()
+                .replace(/into/g, '*')
+                .replace(/times/g, '*')
+                .replace(/divided by/g, '/')
+                .replace(/[a-zA-Z\?\,\!\=\:\_]/g, '')
+                .trim();
+
+            if (cleanInput && cleanInput.length >= 3 && /[\+\-\*\/\%\^]/.test(cleanInput)) {
+                const sanitized = cleanInput.replace(/\^/g, '**');
                 const result = Function('"use strict";return (' + sanitized + ')')();
-                if (!isNaN(result) && isFinite(result)) {
-                    return `🧮 **Calculated Result**: \`${mathCandidate}\` = **${result}**`;
+                if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
+                    return `🧮 **Calculated Answer**: \`${cleanInput}\` = **${result}**`;
                 }
             }
-        } catch(e) {}
-
-        const pctMatch = lower.match(/(\d+\.?\d*)\s*%\s*of\s*(\d+\.?\d*)/);
-        if (pctMatch) {
-            const pct = parseFloat(pctMatch[1]);
-            const val = parseFloat(pctMatch[2]);
-            const res = (pct / 100.0) * val;
-            const formatted = Number.isInteger(res) ? res : res.toFixed(4);
-            return `🧮 **Calculated Result**: ${pct}% of ${val} = **${formatted}**`;
+        } catch (e) {
+            return null;
         }
+        return null;
+    }
+
+    // Dynamic Context Chips Renderer
+    function renderDynamicChips(responseType, userQuery) {
+        if (responseType === 'math') {
+            return [
+                "⚡ Explain Step-by-Step",
+                "⚡ Convert Units",
+                "⚡ Multiply by 2"
+            ];
+        } else if (userQuery.toLowerCase().includes("code") || userQuery.toLowerCase().includes("python")) {
+            return [
+                "⚡ Explain Code Step-by-Step",
+                "⚡ Add Unit Test Suite",
+                "⚡ Optimize Code Performance"
+            ];
+        } else {
+            return [
+                "⚡ Summarize",
+                "📋 Copy Output",
+                "⚡ Translate to Marathi (मराठी)",
+                "⚡ Translate to Hindi (हिंदी)"
+            ];
+        }
+    }
+
+    function evaluateFallbackPrompt(prompt) {
+        const cleanPrompt = prompt.trim();
+        const lower = cleanPrompt.toLowerCase();
 
         if (lower.includes("code") || lower.includes("python") || lower.includes("script")) {
             const sampleCode = `import os, shutil\n# File Organizer Script\ndef organize_files(folder='.'):\n    for f in os.listdir(folder):\n        if os.path.isfile(f) and '.' in f:\n            ext = f.split('.')[-1]\n            os.makedirs(ext, exist_ok=True)\n            shutil.move(f, os.path.join(ext, f))\n    print('Files organized cleanly!')\n\norganize_files('.')`;
@@ -400,33 +447,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         return `🤖 **Direct Answer for '${cleanPrompt}'**:\nProcessed locally on your device with 100% data privacy. Let me know if you'd like to run calculations, search the web, or inspect system status! 😊`;
-    }
-
-    function generateDynamicContextChips(responseText) {
-        if (responseText.includes("Calculated Result") || /\=\s*\*\*\d+/.test(responseText)) {
-            const numMatch = responseText.match(/\*\*(.*?)\*\*/);
-            const val = numMatch ? numMatch[1] : "0";
-            return [
-                `⚡ Convert ${val} Units`,
-                `⚡ Multiply ${val} by 2`,
-                `⚡ Graph Result`
-            ];
-        }
-
-        if (responseText.includes("```python") || responseText.includes("Generated Python")) {
-            return [
-                "⚡ Explain Code Step-by-Step",
-                "⚡ Add Unit Test Suite",
-                "⚡ Optimize Code Performance"
-            ];
-        }
-
-        return [
-            "⚡ Search Web",
-            "⚡ Local Memory",
-            "⚡ System Audit",
-            "⚡ Summarize Output"
-        ];
     }
 
     window.executeSandboxCode = function(base64Code) {
@@ -454,7 +474,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (suggestions && suggestions.length > 0) {
                 suggestionsHtml = `
                     <div class="followup-container">
-                        ${suggestions.map(s => `<button class="followup-chip" onclick="sendQuickPrompt('${s.replace(/'/g, "\\'")}')">${s}</button>`).join('')}
+                        ${suggestions.map(s => `<button class="followup-chip" onclick="sendQuickQuery('${s.replace(/'/g, "\\'")}')">${s}</button>`).join('')}
                     </div>
                 `;
             }
@@ -475,6 +495,10 @@ document.addEventListener("DOMContentLoaded", () => {
         messagesList.appendChild(row);
         chatScroll.scrollTop = chatScroll.scrollHeight;
     }
+
+    window.sendQuickQuery = function(promptText) {
+        handleUserSubmit(promptText);
+    };
 
     function appendThinkingIndicator() {
         const id = "thinking-" + Date.now();

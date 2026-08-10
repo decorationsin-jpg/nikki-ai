@@ -579,9 +579,69 @@ body {
     color: white;
 }
 
-.disclaimer {
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-align: center;
-    margin-top: 4px;
+/* Mobile Responsive Layout & Breakpoint Adjustments */
+.app-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    gap: 10px;
+}
+
+.chat-container {
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+.action-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+@media (max-width: 600px) {
+    .telemetry-pill, .system-stats {
+        display: none !important;
+    }
+
+    .app-header {
+        justify-content: center;
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .brand-title, .app-title {
+        font-size: 17px;
+    }
+
+    .msg-row.user .msg-content, .msg-row.assistant .msg-content {
+        max-width: 92%;
+        font-size: 14px;
+        padding: 10px 14px;
+    }
+
+    .greeting-text {
+        font-size: 32px;
+    }
+
+    .sub-greeting {
+        font-size: 26px;
+    }
+
+    .suggestions-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .input-floating-container {
+        left: 10px;
+        right: 10px;
+        bottom: 12px;
+        padding: 6px 12px;
+    }
 }
