@@ -7,6 +7,7 @@ import re
 from typing import Dict, Any, Optional
 from modules.local_llm import LocalLLM
 from modules.tool_registry import ToolRegistry
+from modules.basic_qa_engine import BasicQAEngine
 
 class AutonomousAgentLoop:
     """
@@ -16,6 +17,7 @@ class AutonomousAgentLoop:
     def __init__(self, model_name: str = "llama3.2", max_steps: int = 8):
         self.llm = LocalLLM(model_name=model_name)
         self.tools = ToolRegistry()
+        self.qa_engine = BasicQAEngine()
         self.max_steps = max_steps
         # Launch 24/7 background continuous learning daemon
         try:
@@ -83,6 +85,11 @@ Respond in EXACT JSON format:
     def _fallback_rule_execution(self, user_goal: str) -> str:
         """Executes intelligent conversational fallback rule engine for 100% of prompts."""
         goal_lower = user_goal.lower().strip()
+
+        # Step 0: Check Universal Basic Q&A Engine for instant direct answer
+        basic_answer = self.qa_engine.answer_basic_question(user_goal)
+        if basic_answer:
+            return basic_answer
 
         # Rule 0: Greetings & Identity
         if any(w in goal_lower for w in ["hi", "hello", "hey", "who are you", "what is your name", "namaste", "namaskar"]):
