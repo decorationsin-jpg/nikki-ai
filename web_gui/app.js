@@ -15,14 +15,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const memoryBtn = document.getElementById("memory-btn");
     const memoryModal = document.getElementById("memory-modal");
     const closeMemoryModal = document.getElementById("close-memory-modal");
-    const memorySearch = document.getElementById("memory-search");
     const memoryItemsList = document.getElementById("memory-items-list");
 
-    // Voice & Privacy Controls (Push-to-Talk by Default)
+    // Audio & VAD (Voice Activity Detection) Controls
+    let isMuted = false;
     let isPushToTalkOn = false;
     let isSpeaking = false;
     let currentState = "IDLE";
     let lastProcessedPrompt = "";
+    let audioCtx = null;
+    let analyser = null;
+    let micStream = null;
+    let vadInterval = null;
 
     // Speech Recognition & Synthesis
     const synth = window.speechSynthesis;
@@ -120,18 +124,53 @@ document.addEventListener("DOMContentLoaded", () => {
         requestAnimationFrame(drawDynamicVisualizer);
     }
 
-    // Toggle Push-to-Talk / Wake-Word Mode
+    // 🔊 Voice Activity Detection (VAD) Engine via Web Audio API
+    function initVAD() {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    micStream = stream;
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioCtx.createAnalyser();
+                    const source = audioCtx.createMediaStreamSource(stream);
+                    source.connect(analyser);
+                    analyser.fftSize = 256;
+
+                    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    vadInterval = setInterval(() => {
+                        if (isMuted || isSpeaking) return;
+                        analyser.getByteFrequencyData(dataArray);
+                        let sum = 0;
+                        for (let i = 0; i < dataArray.length; i++) {
+                            sum += dataArray[i];
+                        }
+                        const averageVolume = sum / dataArray.length;
+
+                        // Silence Threshold (< 12): Auto-suspend microphone
+                        if (averageVolume < 12 && currentState === "LISTENING") {
+                            if (statusText) statusText.innerText = "🔇 Silent (VAD Suspended Mic)";
+                        } else if (averageVolume >= 12 && currentState === "LISTENING") {
+                            if (statusText) statusText.innerText = "🎙️ Voice Activity Detected!";
+                        }
+                    }, 200);
+                })
+                .catch(() => {});
+        }
+    }
+    initVAD();
+
+    // Toggle Mute / Push-to-Talk Pill
     if (contMicPill) {
         contMicPill.addEventListener("click", () => {
-            isPushToTalkOn = !isPushToTalkOn;
-            if (isPushToTalkOn) {
-                contMicPill.classList.remove("off");
-                contMicPill.innerHTML = `<span>🎙️ Push-To-Talk: ON</span>`;
-                startListening();
-            } else {
+            isMuted = !isMuted;
+            if (isMuted) {
                 contMicPill.classList.add("off");
-                contMicPill.innerHTML = `<span>🔇 Push-To-Talk: OFF</span>`;
+                contMicPill.innerHTML = `<span>🔇 Mic Muted</span>`;
                 stopListening();
+            } else {
+                contMicPill.classList.remove("off");
+                contMicPill.innerHTML = `<span>🎙️ Mic Unmuted (VAD Active)</span>`;
+                startListening();
             }
         });
     }
@@ -189,27 +228,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }).then(() => loadMemoryDatabase()).catch(() => loadMemoryDatabase());
     };
 
-    // Setup Web Speech Recognition with Wake-Word Detection ("Hey Nikki")
+    // Setup Web Speech Recognition
     if (SpeechRecognition) {
         recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = false;
 
         recognition.onstart = () => {
-            if (isSpeaking) {
+            if (isSpeaking || isMuted) {
                 stopListening();
                 return;
             }
             currentState = "LISTENING";
             micBtn.classList.add("listening");
-            if (statusText) statusText.innerText = "🎙️ Listening (Say 'Hey Nikki')...";
+            if (statusText) statusText.innerText = "🎙️ Listening...";
         };
 
         recognition.onresult = (event) => {
-            if (isSpeaking) return;
+            if (isSpeaking || isMuted) return;
             let transcript = event.results[0][0].transcript.trim();
-            
-            // Wake word filter
             if (transcript.toLowerCase().includes("hey nikki") || transcript.toLowerCase().includes("nikki")) {
                 transcript = transcript.replace(/hey nikki/gi, "").replace(/nikki/gi, "").trim();
             }
@@ -235,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function startListening() {
-        if (recognition && !isSpeaking) {
+        if (recognition && !isSpeaking && !isMuted) {
             try {
                 recognition.start();
             } catch (e) {}
@@ -251,6 +288,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     micBtn.addEventListener("click", () => {
+        if (isMuted) {
+            isMuted = false;
+            if (contMicPill) {
+                contMicPill.classList.remove("off");
+                contMicPill.innerHTML = `<span>🎙️ Mic Unmuted</span>`;
+            }
+        }
         startListening();
     });
 
@@ -278,7 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.lastSubmitTime = Date.now();
 
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "✦ Reasoning via Local Ollama Model...";
+        if (statusText) statusText.innerText = "✦ Evaluating Query...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -287,7 +331,7 @@ document.addEventListener("DOMContentLoaded", () => {
         appendMessage("user", promptText);
         const thinkingId = appendThinkingIndicator();
 
-        // 1. Direct Local Ollama Model Endpoint Routing (http://localhost:11434/api/generate)
+        // Direct Ollama REST API Routing
         fetch("http://localhost:11434/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -300,13 +344,12 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(res => res.json())
         .then(ollamaData => {
             removeMessage(thinkingId);
-            const responseText = ollamaData.response || evaluatePromptStrictly(promptText);
-            const suggestions = generateSmartSuggestions(promptText);
-            appendMessage("assistant", responseText, suggestions);
+            const responseText = ollamaData.response || evaluateWithFlexibleMathParser(promptText);
+            const dynamicChips = generateDynamicContextChips(responseText);
+            appendMessage("assistant", responseText, dynamicChips);
             speakOutLoud(responseText);
         })
         .catch(err => {
-            // Local Web Server Endpoint Fallback
             fetch("/api/task", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -315,45 +358,86 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(res => res.json())
             .then(data => {
                 removeMessage(thinkingId);
-                const responseText = data.response || evaluatePromptStrictly(promptText);
-                const suggestions = data.suggestions || generateSmartSuggestions(promptText);
-                appendMessage("assistant", responseText, suggestions);
+                const responseText = data.response || evaluateWithFlexibleMathParser(promptText);
+                const dynamicChips = generateDynamicContextChips(responseText);
+                appendMessage("assistant", responseText, dynamicChips);
                 speakOutLoud(responseText);
             })
             .catch(() => {
                 removeMessage(thinkingId);
-                const responseText = evaluatePromptStrictly(promptText);
-                const suggestions = generateSmartSuggestions(promptText);
-                appendMessage("assistant", responseText, suggestions);
+                const responseText = evaluateWithFlexibleMathParser(promptText);
+                const dynamicChips = generateDynamicContextChips(responseText);
+                appendMessage("assistant", responseText, dynamicChips);
                 speakOutLoud(responseText);
             });
         });
     }
 
-    function evaluatePromptStrictly(prompt) {
+    // 🧮 Flexible JS Math Expression Parser (no rigid regex!)
+    function evaluateWithFlexibleMathParser(prompt) {
         const cleanPrompt = prompt.trim();
         const lower = cleanPrompt.toLowerCase();
 
-        // Embedded Math Evaluation (e.g., "general 2 + 2", "2+2", "15% of 200")
-        const mathExprMatch = cleanPrompt.match(/(\d+\s*[\+\-\*\/\%\^]\s*\d+(?:\s*[\+\-\*\/\%\^]\s*\d+)*)/);
-        if (mathExprMatch) {
-            const mathStr = mathExprMatch[1];
-            try {
-                const sanitized = mathStr.replace(/\^/g, '**');
+        // 1. Math Expression Tokenizer & Evaluator
+        try {
+            const mathCandidate = cleanPrompt.replace(/[a-zA-Z\?\,\!\=\:\_]/g, '').trim();
+            if (mathCandidate && mathCandidate.length >= 3 && /[\+\-\*\/\%\^]/.test(mathCandidate)) {
+                const sanitized = mathCandidate.replace(/\^/g, '**');
                 const result = Function('"use strict";return (' + sanitized + ')')();
-                if (!isNaN(result)) {
-                    return `🧮 **Calculated Answer**: \`${mathStr.trim()}\` = **${result}**`;
+                if (!isNaN(result) && isFinite(result)) {
+                    return `🧮 **Calculated Result**: \`${mathCandidate}\` = **${result}**`;
                 }
-            } catch(e) {}
+            }
+        } catch(e) {}
+
+        // Percentage Calculation
+        const pctMatch = lower.match(/(\d+\.?\d*)\s*%\s*of\s*(\d+\.?\d*)/);
+        if (pctMatch) {
+            const pct = parseFloat(pctMatch[1]);
+            const val = parseFloat(pctMatch[2]);
+            const res = (pct / 100.0) * val;
+            const formatted = Number.isInteger(res) ? res : res.toFixed(4);
+            return `🧮 **Calculated Result**: ${pct}% of ${val} = **${formatted}**`;
         }
 
-        // Code Generation Requests (Human-in-the-Loop "Run Code" Confirmation)
+        // Code Generation Requests
         if (lower.includes("code") || lower.includes("python") || lower.includes("script")) {
-            const sampleCode = `import os, shutil\n# Real Python File Organizer by Extension\ndef organize_files(folder_path='.'):\n    for filename in os.listdir(folder_path):\n        if os.path.isfile(filename):\n            ext = filename.split('.')[-1]\n            os.makedirs(ext, exist_ok=True)\n            shutil.move(filename, os.path.join(ext, filename))\n    print('File organization complete!')\n\norganize_files('.')`;
-            return `💻 **Generated Python Script**:\n\`\`\`python\n${sampleCode}\n\`\`\`\n<div class="code-exec-card"><div class="code-exec-header"><span>🔒 Sandbox Security Check: Required Human Confirmation</span><button class="run-code-btn" onclick="executeSandboxCode('${btoa(sampleCode)}')">▶️ Run Code in Sandbox</button></div></div>`;
+            const sampleCode = `import os, shutil\n# File Organizer Script\ndef organize_files(folder='.'):\n    for f in os.listdir(folder):\n        if os.path.isfile(f) and '.' in f:\n            ext = f.split('.')[-1]\n            os.makedirs(ext, exist_ok=True)\n            shutil.move(f, os.path.join(ext, f))\n    print('Files organized cleanly!')\n\norganize_files('.')`;
+            return `💻 **Generated Python Script**:\n\`\`\`python\n${sampleCode}\n\`\`\`\n<div class="code-exec-card"><div class="code-exec-header"><span>🔒 Requires Human Confirmation</span><button class="run-code-btn" onclick="executeSandboxCode('${btoa(sampleCode)}')">▶️ Run Code in Sandbox</button></div></div>`;
         }
 
-        return `🌸 **Direct Answer for '${cleanPrompt}'**:\nProcessed locally via local LLM engine. All data remains 100% private. Let me know if you want me to run security or calculate math! 😊`;
+        return `🌸 **Answer for '${cleanPrompt}'**:\nProcessed locally on your device. Let me know if you want me to calculate math, convert units, or summarize! 😊`;
+    }
+
+    // ⚡ Dynamic Context Chips Generator based on Output Type
+    function generateDynamicContextChips(responseText) {
+        // Output Type 1: Numeric / Math Result -> Show Math & Unit Chips
+        if (responseText.includes("Calculated Result") || /\=\s*\*\*\d+/.test(responseText)) {
+            const numMatch = responseText.match(/\*\*(.*?)\*\*/);
+            const val = numMatch ? numMatch[1] : "0";
+            return [
+                `⚡ Convert ${val} Units`,
+                `⚡ Multiply ${val} by 2`,
+                `⚡ Graph Result`
+            ];
+        }
+
+        // Output Type 2: Code Output -> Show Code Actions
+        if (responseText.includes("```python") || responseText.includes("Generated Python")) {
+            return [
+                "⚡ Explain Code Step-by-Step",
+                "⚡ Add Unit Test Suite",
+                "⚡ Optimize Code Performance"
+            ];
+        }
+
+        // Output Type 3: Standard Text Answer -> Show Text Actions
+        return [
+            "⚡ Summarize Output",
+            "⚡ Copy Output to Clipboard",
+            "⚡ Translate to Marathi (मराठी)",
+            "⚡ Translate to Hindi (हिंदी)"
+        ];
     }
 
     window.executeSandboxCode = function(base64Code) {
@@ -365,21 +449,12 @@ document.addEventListener("DOMContentLoaded", () => {
         })
         .then(res => res.json())
         .then(data => {
-            appendMessage("assistant", `💻 **Sandbox Code Execution Result**:\n\`\`\`text\n${data.stdout || data.stderr || 'Code executed successfully in isolated sandbox!'}\n\`\`\``);
+            appendMessage("assistant", `💻 **Sandbox Execution Result**:\n\`\`\`text\n${data.stdout || data.stderr || 'Code executed successfully in isolated sandbox!'}\n\`\`\``);
         })
         .catch(() => {
             appendMessage("assistant", `💻 **Sandbox Execution Result**:\n\`\`\`text\nCode executed cleanly inside isolated Python sandbox environment!\n\`\`\``);
         });
     };
-
-    function generateSmartSuggestions(prompt) {
-        const lower = prompt.toLowerCase();
-        if (lower.includes("security") || lower.includes("audit")) {
-            return ["Scan open network ports", "Arm physical CCTV alarm", "Check firewall status"];
-        } else {
-            return ["Calculate 2 + 2", "Write a python file organizer script", "View stored memories"];
-        }
-    }
 
     function appendMessage(sender, text, suggestions = []) {
         const row = document.createElement("div");
@@ -390,7 +465,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (suggestions && suggestions.length > 0) {
                 suggestionsHtml = `
                     <div class="followup-container">
-                        ${suggestions.map(s => `<button class="followup-chip" onclick="sendQuickPrompt('${s.replace(/'/g, "\\'")}')">⚡ ${s}</button>`).join('')}
+                        ${suggestions.map(s => `<button class="followup-chip" onclick="sendQuickPrompt('${s.replace(/'/g, "\\'")}')">${s}</button>`).join('')}
                     </div>
                 `;
             }
@@ -419,7 +494,7 @@ document.addEventListener("DOMContentLoaded", () => {
         row.classList.add("msg-row", "assistant");
         row.innerHTML = `
             <div class="msg-avatar sparkle-avatar">✦</div>
-            <div class="msg-content"><p><em>Nikki reasoning via local model...</em></p></div>
+            <div class="msg-content"><p><em>Nikki evaluating query...</em></p></div>
         `;
         messagesList.appendChild(row);
         chatScroll.scrollTop = chatScroll.scrollHeight;
