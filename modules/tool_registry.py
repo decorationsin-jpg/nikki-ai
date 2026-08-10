@@ -30,6 +30,7 @@ from modules.advanced_code_executor import AdvancedCodeExecutor
 from modules.deep_web_intelligence import DeepWebIntelligence
 from modules.system_optimizer import SystemOptimizer
 from modules.google_search_engine import GoogleSearchEngine
+from modules.auto_calculator import AutoCalculatingEngine
 
 class ToolRegistry:
     def __init__(self):
@@ -61,6 +62,7 @@ class ToolRegistry:
         self.deep_web = DeepWebIntelligence()
         self.optimizer = SystemOptimizer()
         self.google = GoogleSearchEngine()
+        self.calculator = AutoCalculatingEngine()
 
     def get_tool_descriptions(self) -> str:
         return """
@@ -131,6 +133,7 @@ Available Tools:
 64. get_hardware_telemetry(): Fetch detailed CPU, RAM, and Disk metrics.
 65. google_search(query): Direct Google Search Engine scraper & snippet extractor.
 66. google_answer(query): Search Google and format answer 'As per Google Search Results'.
+67. auto_calculate(expression): Auto-calculate arithmetic, percentages, powers, and scientific math functions.
 """
 
     def execute_tool(self, tool_name: str, **kwargs) -> str:
@@ -276,6 +279,9 @@ Available Tools:
                 return str(self.google.search_google(kwargs.get("query", "")))
             elif tool_name == "google_answer":
                 return self.google.get_google_answer(kwargs.get("query", ""))
+            elif tool_name == "auto_calculate":
+                res = self.calculator.calculate(kwargs.get("expression", ""))
+                return res["formatted"] if res else "Could not calculate expression."
             else:
                 return f"Error: Unknown tool '{tool_name}'"
         except Exception as e:

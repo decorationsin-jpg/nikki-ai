@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let isContinuousMicOn = true;
     let isSpeaking = false;
     let currentState = "IDLE";
+    let lastProcessedPrompt = "";
 
     // Speech Recognition & Synthesis
     const synth = window.speechSynthesis;
@@ -135,15 +136,22 @@ document.addEventListener("DOMContentLoaded", () => {
         recognition.interimResults = false;
 
         recognition.onstart = () => {
+            if (isSpeaking) {
+                stopListening();
+                return;
+            }
             currentState = "LISTENING";
             micBtn.classList.add("listening");
             if (statusText) statusText.innerText = "🎙️ Nikki Listening...";
         };
 
         recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            userInput.value = transcript;
-            handleUserSubmit(transcript);
+            if (isSpeaking) return;
+            const transcript = event.results[0][0].transcript.trim();
+            if (transcript && transcript !== lastProcessedPrompt) {
+                userInput.value = transcript;
+                handleUserSubmit(transcript);
+            }
         };
 
         recognition.onerror = () => {
@@ -182,7 +190,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isContinuousMicOn && !isSpeaking) {
             setTimeout(() => {
                 startListening();
-            }, 800);
+            }, 1000);
         }
     }
 
@@ -208,9 +216,18 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     function handleUserSubmit(promptText) {
+        if (isSpeaking) return;
         stopListening();
+        
+        // Anti-Repeating Filter
+        if (promptText === lastProcessedPrompt && (Date.now() - window.lastSubmitTime) < 3000) {
+            return;
+        }
+        lastProcessedPrompt = promptText;
+        window.lastSubmitTime = Date.now();
+
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "✦ Nikki Reasoning...";
+        if (statusText) statusText.innerText = "✦ Nikki Auto-Calculating...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -227,32 +244,51 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(res => res.json())
         .then(data => {
             removeMessage(thinkingId);
-            const responseText = data.response || generateSmartClientResponse(promptText);
+            const responseText = data.response || autoCalculateOrRespond(promptText);
             const suggestions = data.suggestions || generateSmartSuggestions(promptText);
             appendMessage("assistant", responseText, suggestions);
             speakOutLoud(responseText);
         })
         .catch(err => {
             removeMessage(thinkingId);
-            // Smart Client-Side Response Generator
-            const responseText = generateSmartClientResponse(promptText);
+            const responseText = autoCalculateOrRespond(promptText);
             const suggestions = generateSmartSuggestions(promptText);
             appendMessage("assistant", responseText, suggestions);
             speakOutLoud(responseText);
         });
     }
 
-    function generateSmartClientResponse(prompt) {
+    function autoCalculateOrRespond(prompt) {
         const cleanPrompt = prompt.trim();
         const lower = cleanPrompt.toLowerCase();
 
-        // Instant Math Evaluator (e.g., 2+2, 10*5, 100/4, 25-10)
+        // 🧮 Auto-Calculating System (Arithmetic, Scientific Math & Percentages)
+        // 1. Percentage (e.g. 15% of 200)
+        const pctMatch = lower.match(/(\d+\.?\d*)\s*%\s*of\s*(\d+\.?\d*)/);
+        if (pctMatch) {
+            const pct = parseFloat(pctMatch[1]);
+            const val = parseFloat(pctMatch[2]);
+            const res = (pct / 100.0) * val;
+            const formatted = Number.isInteger(res) ? res : res.toFixed(4);
+            return `🧮 **Auto-Calculation**: ${pct}% of ${val} = **${formatted}**`;
+        }
+
+        // 2. Square root (e.g. square root of 144)
+        const sqrtMatch = lower.match(/(?:square root of|sqrt)\s*(\d+\.?\d*)/);
+        if (sqrtMatch) {
+            const val = parseFloat(sqrtMatch[1]);
+            const res = Math.sqrt(val);
+            const formatted = Number.isInteger(res) ? res : res.toFixed(4);
+            return `🧮 **Auto-Calculation**: √${val} = **${formatted}**`;
+        }
+
+        // 3. Pure Math expressions (e.g. 2+2, 10*5, 100/4, 2^10)
         if (/^[0-9\.\s\+\-\*\/\%\^\(\)]+$/.test(cleanPrompt)) {
             try {
                 const sanitized = cleanPrompt.replace(/\^/g, '**');
                 const result = Function('"use strict";return (' + sanitized + ')')();
                 if (!isNaN(result)) {
-                    return `🔢 **Math Answer**: \`${cleanPrompt}\` = **${result}**`;
+                    return `🧮 **Auto-Calculation**: \`${cleanPrompt}\` = **${result}**`;
                 }
             } catch(e) {}
         }
@@ -263,14 +299,8 @@ document.addEventListener("DOMContentLoaded", () => {
             return `🧠 **Got it! I've saved that to my memory store!**\nI have permanently recorded: *"${prompt}"* inside \`memory/user_teachings.json\`. I will remember this forever! 😊`;
         } else if (lower.includes("recall") || lower.includes("know about me")) {
             return "🧠 **Nikki Recalled Memories & Facts**:\n- **Master Security PIN**: `1805`\n- **Privacy Preference**: 100% Local & Offline Data\n- **Voice Engine**: Trilingual (English, Hindi, Marathi) with Warm Emotion Modulation!";
-        } else if (lower.includes("explain") || lower.includes("quantum") || lower.includes("physics")) {
-            return "📚 **Nikki AI Personal Tutor**:\nHere is a simple, clear explanation: Think of computing like flipping a light switch (0 or 1). Quantum computing uses 'qubits' which can be 0 AND 1 at the same time! This lets quantum computers solve complex problems millions of times faster.";
-        } else if (lower.includes("camera") || lower.includes("cctv") || lower.includes("snapshot")) {
-            return "🎥 **IP Camera & Surveillance Status**:\n- **Camera Stream**: RTSP/HTTP feed active\n- **Motion Sensor**: Armed\n- **Surveillance**: Monitoring location. Snapshot saved to \`memory/\`.";
-        } else if (lower.includes("code") || lower.includes("python") || lower.includes("script")) {
-            return "💻 **Nikki Self-Programming Engine**:\n```python\n# Automated Python File Organizer\nimport os, shutil\nprint('Nikki Python script executed successfully!')\n```\nI can write, execute, and self-modify any Python code for you!";
         } else {
-            return `🌸 **Sure thing! Here's what you need to know:**\nI have processed your request for: *"${prompt}"*. All tasks run 100% locally and privately on your device. Let me know if you want me to search Google, run a command, or solve math problems! 😊`;
+            return `🌸 **Sure thing! Here's what you need to know:**\nI have processed your request for: *"${prompt}"*. All tasks run 100% locally and privately on your device. Let me know if you want me to calculate math, search Google, or run security! 😊`;
         }
     }
 
@@ -281,7 +311,7 @@ document.addEventListener("DOMContentLoaded", () => {
         } else if (lower.includes("remember") || lower.includes("teach")) {
             return ["Recall all saved memories", "Teach another personal fact", "Show memory summary"];
         } else {
-            return ["Audit system security", "Solve 2+2", "Search Google"];
+            return ["Calculate 15% of 200", "Square root of 144", "Search Google"];
         }
     }
 
@@ -323,7 +353,7 @@ document.addEventListener("DOMContentLoaded", () => {
         row.classList.add("msg-row", "assistant");
         row.innerHTML = `
             <div class="msg-avatar sparkle-avatar">✦</div>
-            <div class="msg-content"><p><em>Nikki is reasoning and executing tools...</em></p></div>
+            <div class="msg-content"><p><em>Nikki is auto-calculating...</em></p></div>
         `;
         messagesList.appendChild(row);
         chatScroll.scrollTop = chatScroll.scrollHeight;
@@ -338,10 +368,11 @@ document.addEventListener("DOMContentLoaded", () => {
     function speakOutLoud(text) {
         if (synth) {
             isSpeaking = true;
+            stopListening();
             currentState = "SPEAKING";
             if (statusText) statusText.innerText = "🔊 Nikki Speaking...";
 
-            const cleanText = text.replace(/[*#`]/g, "").slice(0, 300);
+            const cleanText = text.replace(/[*#`]/g, "").slice(0, 250);
             const utterance = new SpeechSynthesisUtterance(cleanText);
             utterance.rate = 1.0;
 
