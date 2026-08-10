@@ -113,11 +113,10 @@ Respond in EXACT JSON format:
                 "6. 🎙️ **Voice & Vision**: Listen/Speak hands-free, screen screenshots & webcam photo capture!"
             )
 
-        # Rule 1: Web search request
-        if any(w in goal_lower for w in ["search", "find online", "latest", "news", "google", "what is"]):
-            print("🌐 Executing Free Web Search...")
-            res = self.tools.execute_tool("web_search", query=user_goal)
-            return f"Here is what I found online for you:\n{res}"
+        # Rule 1: Google Search Engine request
+        if any(w in goal_lower for w in ["search", "find online", "latest", "news", "google", "what is", "who is", "tell me about"]):
+            print("🌐 Executing Google Search Engine Reader...")
+            return self.tools.execute_tool("google_answer", query=user_goal)
 
         # Rule 2: File operation request
         if any(w in goal_lower for w in ["file", "create file", "write file", "make file"]):

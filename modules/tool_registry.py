@@ -29,6 +29,7 @@ from modules.responsible_ai import ResponsibleAIEngine
 from modules.advanced_code_executor import AdvancedCodeExecutor
 from modules.deep_web_intelligence import DeepWebIntelligence
 from modules.system_optimizer import SystemOptimizer
+from modules.google_search_engine import GoogleSearchEngine
 
 class ToolRegistry:
     def __init__(self):
@@ -59,6 +60,7 @@ class ToolRegistry:
         self.executor = AdvancedCodeExecutor()
         self.deep_web = DeepWebIntelligence()
         self.optimizer = SystemOptimizer()
+        self.google = GoogleSearchEngine()
 
     def get_tool_descriptions(self) -> str:
         return """
@@ -127,6 +129,8 @@ Available Tools:
 62. deep_research(topic): Generate a deep research briefing synthesizing Wikipedia, GitHub repos, and web articles.
 63. optimize_memory(): Free unused RAM and force garbage collection cleanup.
 64. get_hardware_telemetry(): Fetch detailed CPU, RAM, and Disk metrics.
+65. google_search(query): Direct Google Search Engine scraper & snippet extractor.
+66. google_answer(query): Search Google and format answer 'As per Google Search Results'.
 """
 
     def execute_tool(self, tool_name: str, **kwargs) -> str:
@@ -268,6 +272,10 @@ Available Tools:
                 return self.optimizer.optimize_memory()
             elif tool_name == "get_hardware_telemetry":
                 return str(self.optimizer.get_hardware_telemetry())
+            elif tool_name == "google_search":
+                return str(self.google.search_google(kwargs.get("query", "")))
+            elif tool_name == "google_answer":
+                return self.google.get_google_answer(kwargs.get("query", ""))
             else:
                 return f"Error: Unknown tool '{tool_name}'"
         except Exception as e:
