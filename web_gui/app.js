@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const contMicPill = document.getElementById("cont-mic-pill");
     const statusText = document.getElementById("status-text");
     const themeSelect = document.getElementById("theme-select");
+    const voicePersonaSelect = document.getElementById("voice-persona-select");
     const telemetryCpu = document.getElementById("telemetry-cpu");
     const telemetryRam = document.getElementById("telemetry-ram");
     const exportChatBtn = document.getElementById("export-chat-btn");
@@ -40,9 +41,18 @@ document.addEventListener("DOMContentLoaded", () => {
         ]
     };
     window.adminOverrides = JSON.parse(localStorage.getItem('nikki_admin_overrides') || '[]');
+    window.currentVoicePersona = localStorage.getItem('nikki_voice_persona') || 'ROMANTIC';
     window.lastCalculatedResult = null;
     window.lastResponseText = "";
     let isAdminUnlocked = false;
+
+    if (voicePersonaSelect) {
+        voicePersonaSelect.value = window.currentVoicePersona;
+        voicePersonaSelect.addEventListener("change", (e) => {
+            window.currentVoicePersona = e.target.value;
+            localStorage.setItem('nikki_voice_persona', e.target.value);
+        });
+    }
 
     // 🌐 WebLLM In-Browser WebGPU Model Engine
     let engine = null;
@@ -475,7 +485,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const queryToUse = cleanQuery.length > 0 ? cleanQuery : searchQuery;
         const lowerQuery = queryToUse.toLowerCase();
 
-        // 🏛️ Dedicated Knowledge Base: Dr. Babasaheb Ambedkar
         if (lowerQuery.includes("ambedkar") || lowerQuery.includes("babasaheb") || lowerQuery.includes("dr babasaheb")) {
             return `📖 **Information about Dr. Babasaheb Ambedkar (1891–1956)**:\n\n` +
                    `Dr. B.R. Ambedkar was an Indian jurist, economist, social reformer, and political leader who headed the committee drafting the **Constitution of India** from the Constituent Assembly debates.\n\n` +
@@ -552,7 +561,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // --- Rule 3: Greetings ---
         if (["hi", "hello", "hey", "hi nikki", "hello nikki"].includes(lowerInput)) {
-            if (window.nikkiMemory.userName) {
+            const persona = window.currentVoicePersona || 'ROMANTIC';
+            if (persona === 'ROMANTIC') {
+                const nameStr = window.nikkiMemory.userName ? ` **${window.nikkiMemory.userName}**` : '';
+                return `Good morning${nameStr}... ❤️ I'm Nikki. What would you like to do today?`;
+            } else if (window.nikkiMemory.userName) {
                 return `Hello **${window.nikkiMemory.userName}**! How can I help you today? 😊`;
             } else {
                 return `Hello! I'm **Nikki 3.6**, your autonomous local AI assistant. What's your name? 😊`;
@@ -575,6 +588,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 }).catch(() => {});
             } catch(e){}
 
+            const persona = window.currentVoicePersona || 'ROMANTIC';
+            if (persona === 'ROMANTIC') {
+                return `Nice to meet you, **${formattedName}**... I will remember your name forever. ❤️`;
+            }
             return `Nice to meet you, **${formattedName}**! I will remember your name. 💖`;
         }
 
@@ -893,6 +910,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (el) el.remove();
     }
 
+    // 🎙️ Speech Synthesis with Female Persona Inflection Parameters
     function speakOutLoud(text) {
         if (synth) {
             isSpeaking = true;
@@ -900,9 +918,34 @@ document.addEventListener("DOMContentLoaded", () => {
             currentState = "SPEAKING";
             if (statusText) statusText.innerText = "🔊 Nikki Speaking...";
 
+            const persona = window.currentVoicePersona || 'ROMANTIC';
             const cleanText = text.replace(/[*#`]/g, "").slice(0, 250);
             const utterance = new SpeechSynthesisUtterance(cleanText);
-            utterance.rate = 1.0;
+
+            // Configure Voice Inflection Parameters
+            if (persona === 'ROMANTIC') {
+                utterance.pitch = 1.2;  // Medium-high natural pitch
+                utterance.rate = 0.88;  // Slightly slow & relaxed speed
+            } else if (persona === 'FRIENDLY') {
+                utterance.pitch = 1.1;
+                utterance.rate = 0.95;
+            } else if (persona === 'PLAYFUL') {
+                utterance.pitch = 1.3;
+                utterance.rate = 1.05;
+            } else if (persona === 'CALM') {
+                utterance.pitch = 0.95;
+                utterance.rate = 0.85;
+            } else {
+                utterance.pitch = 1.0;
+                utterance.rate = 1.0;
+            }
+
+            // Select Female Voice (Indian English / Hindi / Marathi preference)
+            const voices = synth.getVoices();
+            const femaleVoice = voices.find(v => (v.name.includes("Female") || v.name.includes("Heera") || v.name.includes("Zira") || v.name.includes("Google") || v.lang.includes("en-IN") || v.lang.includes("hi-IN")));
+            if (femaleVoice) {
+                utterance.voice = femaleVoice;
+            }
 
             utterance.onend = () => {
                 isSpeaking = false;
