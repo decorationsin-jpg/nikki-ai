@@ -41,21 +41,19 @@ class AutoCalculatingEngine:
                 "formatted": f"🧮 **Auto-Calculation**: √{val} = **{formatted_res}**"
             }
 
-        # Step 3: Pure Arithmetic & Powers (e.g. 2+2, 10*5+3, 2^10, 100/4)
-        math_chars = re.sub(r'[^0-9\.\+\-\*\/\%\^\(\)\s]', '', clean_expr)
-        if math_chars and len(re.findall(r'\d+', math_chars)) >= 1:
+        # Step 3: Pure Arithmetic & Powers (e.g. "general 2 + 2", "calculate 10*5+3", "2^10", "100/4")
+        math_chars = re.sub(r'[^0-9\.\+\-\*\/\%\^\(\)\s]', '', clean_expr).strip()
+        if math_chars and re.search(r'\d+\s*[\+\-\*/%^]\s*\d+', math_chars):
             try:
-                # Replace ^ with ** for powers
                 eval_str = math_chars.replace('^', '**')
-                # Safe math evaluation using python math scope
                 safe_dict = {"__builtins__": None, "math": math, "abs": abs, "pow": pow, "round": round}
                 res = eval(eval_str, safe_dict, {})
                 if isinstance(res, (int, float)):
                     formatted_res = int(res) if float(res).is_integer() else round(float(res), 4)
                     return {
-                        "expression": math_chars.strip(),
+                        "expression": math_chars,
                         "result": formatted_res,
-                        "formatted": f"🧮 **Auto-Calculation**: `{math_chars.strip()}` = **{formatted_res}**"
+                        "formatted": f"🧮 **Calculated Result**: `{math_chars}` = **{formatted_res}**"
                     }
             except Exception:
                 pass

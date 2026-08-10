@@ -44,15 +44,38 @@ class MemoryEngine:
         return f"Got it! Nikki has remembered: '{key}' = '{value}'"
 
     def teach_memory(self, memory_text: str) -> str:
-        """Saves a general memory or rule taught by the user."""
-        mem = self.load_teachings()
-        mem.setdefault("saved_memories", []).append({
-            "timestamp": time.ctime(),
-            "memory": memory_text
+        """Saves a conversational memory with strict validation and filtering."""
+        if not memory_text or len(memory_text.strip()) < 5:
+            return "Memory rejected: Content too short to be a valid personal fact."
+
+        text_lower = memory_text.lower().strip()
+
+        # Strict Filter: Exclude generic system triggers & prompt chips
+        generic_triggers = [
+            "teach nikki a personal fact", "i will remember this fore",
+            "audit system security", "recall all saved memories",
+            "show memory summary", "scan open network ports",
+            "general 2 + 2", "calculate 15% of 200"
+        ]
+        if any(trigger in text_lower for trigger in generic_triggers):
+            return "Memory ignored: Generic command or system prompt trigger detected."
+
+        # Require factual keyphrases (e.g. "my name", "my birthday", "i love", "my favorite", "remember that")
+        factual_indicators = ["my ", "i am ", "i live ", "i like ", "i love ", "favorite", "birthday", "email", "phone", "remember that"]
+        if not any(ind in text_lower for ind in factual_indicators):
+            return f"Memory rejected: '{memory_text}' does not contain an explicit personal fact or preference statement."
+
+        data = self.load_teachings()
+        timestamp = datetime.now().isoformat()
+        
+        # Clean text
+        clean_fact = memory_text.replace("remember that", "").strip()
+        data.setdefault("saved_memories", []).append({
+            "timestamp": timestamp,
+            "memory": clean_fact
         })
-        self.save_teachings(mem)
-        print(f"🧠 [Nikki Memory Engine]: Saved new memory: '{memory_text}'")
-        return f"Nikki has permanently saved this memory: '{memory_text}'"
+        self.save_teachings(data)
+        return f"Verified Memory Saved: '{clean_fact}' recorded in memory/user_teachings.json."
 
     def recall_memories(self, query: str = "") -> str:
         """Recalls relevant memories or facts saved by Nikki."""
