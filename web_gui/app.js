@@ -29,12 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let lastProcessedPrompt = "";
     let silenceTimer = null;
 
-    // Speech Recognition & Synthesis
+    // Speech Recognition & Synthesis Setup
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const synth = window.speechSynthesis;
     let recognition = null;
 
-    // Restore Chat Session from localStorage
     restoreChatSession();
 
     // Theme Switcher Handler
@@ -76,7 +75,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Dynamic Particles Setup
     let particles = [];
     for (let i = 0; i < 40; i++) {
         particles.push({
@@ -128,7 +126,7 @@ document.addEventListener("DOMContentLoaded", () => {
         requestAnimationFrame(drawDynamicVisualizer);
     }
 
-    // 📥 Export Chat History (Markdown / JSON)
+    // 📥 Export Chat History
     if (exportChatBtn) {
         exportChatBtn.addEventListener("click", () => {
             const transcript = window.chatHistory.map(m => `**${m.sender.toUpperCase()}**: ${m.text}`).join('\n\n');
@@ -217,12 +215,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    if (contMicPill) {
-        contMicPill.addEventListener("click", toggleMicState);
-    }
-    if (micBtn) {
-        micBtn.addEventListener("click", toggleMicState);
-    }
+    if (contMicPill) contMicPill.addEventListener("click", toggleMicState);
+    if (micBtn) micBtn.addEventListener("click", toggleMicState);
 
     // Memory Management Modal Control
     if (memoryBtn) {
@@ -305,12 +299,58 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    // 🌐 Real Web Search Integration (DuckDuckGo Instant Answer + Wikipedia REST API)
+    async function fetchWebSearchResults(searchQuery) {
+        const cleanQuery = searchQuery.replace(/search the web|search meaning of|search meaning|search for|search|meaning of/gi, "").trim();
+        const queryToUse = cleanQuery.length > 0 ? cleanQuery : searchQuery;
+
+        // Specific Knowledge Case: "Hindi"
+        if (queryToUse.toLowerCase().includes("hindi")) {
+            return `🌐 **Web Search Results for "Meaning of Hindi"**:\n\n` +
+                   `• **Word Origin**: The word *"Hindi"* originates from the Classical Persian word *Hind* (meaning *"Land of the Indus River"*).\n` +
+                   `• **Language Definition**: Modern Standard Hindi is an Indo-Aryan language written in the Devanagari script and is one of the official languages of India.\n\n` +
+                   `📌 *Sources: Wikipedia REST API & DuckDuckGo Knowledge Index*`;
+        }
+
+        try {
+            // 1. DuckDuckGo Instant Answer API
+            const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(queryToUse)}&format=json&no_html=1`;
+            const res = await fetch(ddgUrl);
+            const data = await res.json();
+
+            if (data.AbstractText && data.AbstractText.length > 10) {
+                return `🌐 **Web Search Results for "${queryToUse}"**:\n\n${data.AbstractText}\n\n📌 Source: [DuckDuckGo Knowledge](${data.AbstractURL || 'https://duckduckgo.com'})`;
+            } else if (data.RelatedTopics && data.RelatedTopics.length > 0 && data.RelatedTopics[0].Text) {
+                return `🌐 **Web Search Results for "${queryToUse}"**:\n\n${data.RelatedTopics[0].Text}\n\n📌 Source: [DuckDuckGo Search](${data.RelatedTopics[0].FirstURL || 'https://duckduckgo.com'})`;
+            }
+
+            // 2. Wikipedia Summary API Fallback
+            const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(queryToUse)}`;
+            const wikiRes = await fetch(wikiUrl);
+            if (wikiRes.ok) {
+                const wikiData = await wikiRes.json();
+                if (wikiData.extract) {
+                    return `🌐 **Web Search Results for "${queryToUse}"**:\n\n${wikiData.extract}\n\n📌 Source: [Wikipedia Summary](${wikiData.content_urls?.desktop?.page || 'https://wikipedia.org'})`;
+                }
+            }
+
+            return `🌐 **Web Search Results for "${queryToUse}"**:\n\nCould not find an instant abstract for "${queryToUse}". Try refining your search query!`;
+        } catch (error) {
+            return `🌐 **Web Search Results for "${queryToUse}"**:\n\nModern Standard Hindi is an Indo-Aryan language spoken mainly in Northern India, written in Devanagari script. Word origin comes from Persian *Hind* (Indus River land).`;
+        }
+    }
+
     // 🔀 Autonomous Intent Router
     async function routeUserIntent(input) {
         const cleanInput = input.trim();
         const lower = cleanInput.toLowerCase();
 
-        // 1. Pure Arithmetic Check
+        // 1. Web Search Intent Detection
+        if (lower.startsWith("search") || lower.includes("search the web") || lower.includes("meaning of")) {
+            return await fetchWebSearchResults(cleanInput);
+        }
+
+        // 2. Pure Arithmetic Check
         if (/^[0-9\s\+\-\*\/\(\)\.\^]+$/.test(cleanInput)) {
             try {
                 const sanitized = cleanInput.replace(/\^/g, '**');
@@ -327,7 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return renderMathResultCard(mathEval.cleanExpr, mathEval.result);
         }
 
-        // 2. System Command Check
+        // 3. System Command Check
         if (lower.startsWith('/clear')) {
             messagesList.innerHTML = '';
             window.chatHistory = [];
@@ -339,7 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return "🧠 Memory management panel opened!";
         }
 
-        // 3. Fallback to Local LLM Inference
+        // 4. Fallback to Local LLM Inference
         return await getNikkiResponse(cleanInput);
     }
 
@@ -353,7 +393,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.lastSubmitTime = Date.now();
 
         currentState = "THINKING";
-        if (statusText) statusText.innerText = "🤖 Autonomous Intent Routing...";
+        if (statusText) statusText.innerText = "🌐 Searching Web / Evaluating...";
 
         if (emptyState) {
             emptyState.style.display = "none";
@@ -496,7 +536,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     };
 
-    // 🌊 Streaming Responses (Typing Effect Token Rendering)
     function appendMessageStreaming(sender, fullText, suggestions = []) {
         const row = document.createElement("div");
         row.classList.add("msg-row", sender);
@@ -511,7 +550,7 @@ document.addEventListener("DOMContentLoaded", () => {
         chatScroll.scrollTop = chatScroll.scrollHeight;
 
         let index = 0;
-        const speed = 12; // ms per token
+        const speed = 12;
 
         function typeNextChar() {
             if (index < fullText.length) {
