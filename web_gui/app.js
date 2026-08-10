@@ -18,18 +18,35 @@ document.addEventListener("DOMContentLoaded", () => {
     const closeMemoryModal = document.getElementById("close-memory-modal");
     const memoryItemsList = document.getElementById("memory-items-list");
 
-    // 🌐 WebLLM In-Browser WebGPU Model Engine
-    let engine = null;
+    // ⚙️ Admin Response Correction Panel Elements
+    const adminBtn = document.getElementById("admin-btn");
+    const adminModal = document.getElementById("admin-modal");
+    const closeAdminModal = document.getElementById("close-admin-modal");
+    const adminAuthView = document.getElementById("admin-auth-view");
+    const adminDashboardView = document.getElementById("admin-dashboard-view");
+    const adminPinInput = document.getElementById("admin-pin-input");
+    const adminLoginBtn = document.getElementById("admin-login-btn");
+    const adminAuthErr = document.getElementById("admin-auth-err");
+    const adminTriggerInput = document.getElementById("admin-trigger-input");
+    const adminResponseInput = document.getElementById("admin-response-input");
+    const adminSaveRuleBtn = document.getElementById("admin-save-rule-btn");
+    const adminRulesList = document.getElementById("admin-rules-list");
+
+    // 🧠 Global Conversational, Admin Overrides, & State Memory Store
     window.nikkiMemory = {
         userName: localStorage.getItem('nikki_user_name') || null,
         chatHistory: [
             { role: "system", content: "You are Nikki 3.6 Pro, a helpful, friendly local AI assistant running directly inside the user's browser GPU." }
         ]
     };
+    window.adminOverrides = JSON.parse(localStorage.getItem('nikki_admin_overrides') || '[]');
     window.lastCalculatedResult = null;
     window.lastResponseText = "";
+    let isAdminUnlocked = false;
 
-    // Initialize WebGPU Local LLM Model Engine
+    // 🌐 WebLLM In-Browser WebGPU Model Engine
+    let engine = null;
+
     async function initLocalAI() {
         if (window.webllm) {
             try {
@@ -47,6 +64,104 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
     initLocalAI();
+
+    // ⚙️ Admin Panel Modal Controls & PIN Unlock
+    if (adminBtn) {
+        adminBtn.addEventListener("click", () => {
+            adminModal.style.display = "flex";
+            if (!isAdminUnlocked) {
+                adminAuthView.style.display = "flex";
+                adminDashboardView.style.display = "none";
+            } else {
+                adminAuthView.style.display = "none";
+                adminDashboardView.style.display = "flex";
+                renderAdminOverrides();
+            }
+        });
+    }
+
+    if (closeAdminModal) {
+        closeAdminModal.addEventListener("click", () => {
+            adminModal.style.display = "none";
+        });
+    }
+
+    if (adminLoginBtn) {
+        adminLoginBtn.addEventListener("click", () => {
+            const pin = adminPinInput.value.trim();
+            if (pin === "1805" || pin === "1805") { // Master PIN check
+                isAdminUnlocked = true;
+                adminAuthErr.style.display = "none";
+                adminAuthView.style.display = "none";
+                adminDashboardView.style.display = "flex";
+                renderAdminOverrides();
+            } else {
+                adminAuthErr.innerText = "❌ Incorrect Master Security PIN! Try '1805'.";
+                adminAuthErr.style.display = "block";
+            }
+        });
+    }
+
+    if (adminSaveRuleBtn) {
+        adminSaveRuleBtn.addEventListener("click", () => {
+            const trigger = adminTriggerInput.value.trim();
+            const response = adminResponseInput.value.trim();
+
+            if (!trigger || !response) {
+                alert("Please enter both a Trigger question and the Corrected Response!");
+                return;
+            }
+
+            const newRule = {
+                id: "rule_" + Date.now(),
+                trigger: trigger.toLowerCase(),
+                response: response,
+                date: new Date().toLocaleDateString()
+            };
+
+            window.adminOverrides.push(newRule);
+            localStorage.setItem('nikki_admin_overrides', JSON.stringify(window.adminOverrides));
+
+            // Sync with local Python backend server
+            try {
+                fetch("/api/task", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ goal: `Admin rule added: '${trigger}' -> '${response}'` })
+                }).catch(() => {});
+            } catch(e){}
+
+            adminTriggerInput.value = "";
+            adminResponseInput.value = "";
+            renderAdminOverrides();
+            alert("✅ Corrected Response Rule saved! Nikki will return this response for matching queries next time.");
+        });
+    }
+
+    function renderAdminOverrides() {
+        if (!adminRulesList) return;
+        if (window.adminOverrides.length === 0) {
+            adminRulesList.innerHTML = `<p style="color: var(--text-secondary);">No custom response correction rules set yet.</p>`;
+            return;
+        }
+
+        adminRulesList.innerHTML = window.adminOverrides.map(rule => `
+            <div class="memory-item-card" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                <div style="width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: var(--accent-blue); font-size: 13px; font-weight: 600;">🎯 Trigger: "${escapeHtml(rule.trigger)}"</span>
+                    <button class="delete-mem-btn" onclick="deleteAdminRule('${rule.id}')">Delete Rule</button>
+                </div>
+                <p style="color: var(--text-primary); font-size: 14px;">💬 <strong>Corrected Answer:</strong> "${escapeHtml(rule.response)}"</p>
+                <small style="color: var(--text-secondary);">${rule.date}</small>
+            </div>
+        `).join('');
+    }
+
+    window.deleteAdminRule = function(ruleId) {
+        window.adminOverrides = window.adminOverrides.filter(r => r.id !== ruleId);
+        localStorage.setItem('nikki_admin_overrides', JSON.stringify(window.adminOverrides));
+        renderAdminOverrides();
+    };
 
     // 🎙️ Voice & VAD Controls
     let micEnabled = false;
@@ -392,10 +507,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 🔀 Conversational State Memory Intent Router with WebLLM Engine Pipeline
+    // 🔀 Conversational State Memory Intent Router with Priority Admin Overrides
     async function routeUserIntent(input) {
         const cleanInput = input.trim();
         const lowerInput = cleanInput.toLowerCase();
+
+        // 🌟 PRIORITY 0: Check Admin Response Correction Overrides
+        if (window.adminOverrides && window.adminOverrides.length > 0) {
+            for (const rule of window.adminOverrides) {
+                if (lowerInput.includes(rule.trigger) || rule.trigger.includes(lowerInput)) {
+                    return `⚙️ **Admin Corrected Response**:\n\n${rule.response}\n\n📌 *Set by Admin for next time*`;
+                }
+            }
+        }
 
         // Rule A: Greetings
         if (["hi", "hello", "hey", "hi nikki", "hello nikki"].includes(lowerInput)) {

@@ -160,6 +160,17 @@ body {
     border-color: var(--accent-blue);
 }
 
+.admin-btn-highlight {
+    background: rgba(155, 81, 224, 0.15);
+    border: 1px solid rgba(155, 81, 224, 0.4);
+    color: var(--accent-purple);
+}
+
+.admin-btn-highlight:hover {
+    background: rgba(155, 81, 224, 0.3);
+    border-color: var(--accent-purple);
+}
+
 /* Continuous Mic Toggle Pill */
 .cont-mic-pill {
     background: rgba(52, 168, 83, 0.15);

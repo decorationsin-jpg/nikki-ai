@@ -5,6 +5,7 @@ store them permanently in memory/user_teachings.json, and recall them during fut
 """
 import json
 import time
+from datetime import datetime
 from pathlib import Path
 
 class MemoryEngine:

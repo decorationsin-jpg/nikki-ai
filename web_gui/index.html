@@ -34,6 +34,11 @@
                 <span>RAM: <strong id="telemetry-ram">38%</strong></span>
             </div>
 
+            <!-- Admin Correction Panel Button -->
+            <button id="admin-btn" class="header-action-btn admin-btn-highlight" title="Admin Response Correction Panel">
+                ⚙️ Admin Panel
+            </button>
+
             <!-- Export Chat Button -->
             <button id="export-chat-btn" class="header-action-btn" title="Export Chat History">
                 📥 Export
@@ -135,6 +140,42 @@
                 <input type="text" id="memory-search" class="memory-search-input" placeholder="Search stored memories...">
                 <div id="memory-items-list" class="memory-items-container">
                     <p><em>Loading local memory database...</em></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ⚙️ Admin Response Correction Panel Modal -->
+    <div id="admin-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>⚙️ Admin Response Correction Panel</h2>
+                <button id="close-admin-modal" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Auth View -->
+                <div id="admin-auth-view" style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
+                    <p style="color: var(--text-secondary);">Enter Master Security PIN (Default: 1805) to access Admin controls:</p>
+                    <input type="password" id="admin-pin-input" class="memory-search-input" placeholder="Enter PIN..." style="max-width: 250px; text-align: center;">
+                    <button id="admin-login-btn" class="run-code-btn" style="width: 200px;">🔓 Unlock Admin Panel</button>
+                    <p id="admin-auth-err" style="color: #ef4444; display: none; font-size: 13px;"></p>
+                </div>
+
+                <!-- Admin Dashboard View -->
+                <div id="admin-dashboard-view" style="display: none; flex-direction: column; gap: 16px;">
+                    <div style="background: var(--card-bg); padding: 16px; border-radius: 14px; border: 1px solid var(--border-color);">
+                        <h3 style="margin-bottom: 10px; font-size: 15px;">➕ Add Corrected Response Rule for Next Time</h3>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <input type="text" id="admin-trigger-input" class="memory-search-input" placeholder="User Question / Trigger (e.g. 'what is the capital of mars')">
+                            <textarea id="admin-response-input" class="memory-search-input" placeholder="Exact Corrected Response to return next time..." rows="3" style="resize: vertical;"></textarea>
+                            <button id="admin-save-rule-btn" class="run-code-btn" style="align-self: flex-end;">💾 Save Corrected Rule</button>
+                        </div>
+                    </div>
+
+                    <h3 style="font-size: 15px;">📋 Active Corrected Response Overrides</h3>
+                    <div id="admin-rules-list" class="memory-items-container">
+                        <p><em>Loading active override rules...</em></p>
+                    </div>
                 </div>
             </div>
         </div>
