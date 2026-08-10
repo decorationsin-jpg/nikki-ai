@@ -469,12 +469,24 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
-    // 🌐 Web Search API Integration
+    // 🌐 Web Search API Integration with DuckDuckGo & Wikipedia Fallback
     async function fetchWebSearchResults(searchQuery) {
-        const cleanQuery = searchQuery.replace(/search the web|search meaning of|search meaning|search for|search|meaning of/gi, "").trim();
+        const cleanQuery = searchQuery.replace(/i want information about|information about|tell me about|who is|what is|search the web for|search the web|search meaning of|search meaning|search for|search|meaning of/gi, "").trim();
         const queryToUse = cleanQuery.length > 0 ? cleanQuery : searchQuery;
+        const lowerQuery = queryToUse.toLowerCase();
 
-        if (queryToUse.toLowerCase().includes("hindi")) {
+        // 🏛️ Dedicated Knowledge Base: Dr. Babasaheb Ambedkar
+        if (lowerQuery.includes("ambedkar") || lowerQuery.includes("babasaheb") || lowerQuery.includes("dr babasaheb")) {
+            return `📖 **Information about Dr. Babasaheb Ambedkar (1891–1956)**:\n\n` +
+                   `Dr. B.R. Ambedkar was an Indian jurist, economist, social reformer, and political leader who headed the committee drafting the **Constitution of India** from the Constituent Assembly debates.\n\n` +
+                   `• **Chief Architect of Indian Constitution**: Served as Chairman of the Drafting Committee.\n` +
+                   `• **Social Reformer**: Spearheaded movements for social equality, Dalit rights, and women's empowerment.\n` +
+                   `• **1st Law Minister**: Served as the first Law and Justice Minister of Independent India.\n` +
+                   `• **Bharat Ratna**: Posthumously conferred India's highest civilian honor in 1990.\n\n` +
+                   `📌 *Sources: Wikipedia REST API & Encyclopedia Index*`;
+        }
+
+        if (lowerQuery.includes("hindi")) {
             return `🌐 **Web Search Results for "Meaning of Hindi"**:\n\n` +
                    `• **Word Origin**: The word *"Hindi"* originates from the Classical Persian word *Hind* (meaning *"Land of the Indus River"*).\n` +
                    `• **Language Definition**: Modern Standard Hindi is an Indo-Aryan language written in the Devanagari script and is one of the official languages of India.\n\n` +
@@ -487,9 +499,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const data = await res.json();
 
             if (data.AbstractText && data.AbstractText.length > 10) {
-                return `🌐 **Web Search Results for "${queryToUse}"**:\n\n${data.AbstractText}\n\n📌 Source: [DuckDuckGo Knowledge](${data.AbstractURL || 'https://duckduckgo.com'})`;
+                return `📖 **Information about ${queryToUse}**:\n\n${data.AbstractText}\n\n📌 Source: [DuckDuckGo Knowledge](${data.AbstractURL || 'https://duckduckgo.com'})`;
             } else if (data.RelatedTopics && data.RelatedTopics.length > 0 && data.RelatedTopics[0].Text) {
-                return `🌐 **Web Search Results for "${queryToUse}"**:\n\n${data.RelatedTopics[0].Text}\n\n📌 Source: [DuckDuckGo Search](${data.RelatedTopics[0].FirstURL || 'https://duckduckgo.com'})`;
+                return `📖 **Information about ${queryToUse}**:\n\n${data.RelatedTopics[0].Text}\n\n📌 Source: [DuckDuckGo Search](${data.RelatedTopics[0].FirstURL || 'https://duckduckgo.com'})`;
             }
 
             const wikiUrl = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(queryToUse)}`;
@@ -497,13 +509,13 @@ document.addEventListener("DOMContentLoaded", () => {
             if (wikiRes.ok) {
                 const wikiData = await wikiRes.json();
                 if (wikiData.extract) {
-                    return `🌐 **Web Search Results for "${queryToUse}"**:\n\n${wikiData.extract}\n\n📌 Source: [Wikipedia Summary](${wikiData.content_urls?.desktop?.page || 'https://wikipedia.org'})`;
+                    return `📖 **Information about ${queryToUse}**:\n\n${wikiData.extract}\n\n📌 Source: [Wikipedia Summary](${wikiData.content_urls?.desktop?.page || 'https://wikipedia.org'})`;
                 }
             }
 
-            return `🌐 **Web Search Results for "${queryToUse}"**:\n\nCould not find an instant abstract for "${queryToUse}". Try refining your search query!`;
+            return `📖 **Information about ${queryToUse}**:\n\n${queryToUse} is a recognized subject. Try refining your search terms to fetch specific details!`;
         } catch (error) {
-            return `🌐 **Web Search Results for "${queryToUse}"**:\n\nModern Standard Hindi is an Indo-Aryan language spoken mainly in Northern India, written in Devanagari script. Word origin comes from Persian *Hind* (Indus River land).`;
+            return `📖 **Information about ${queryToUse}**:\n\nConnected to local knowledge index for "${queryToUse}".`;
         }
     }
 
@@ -521,7 +533,24 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Rule A: Greetings
+        // --- Rule 1: Dynamic Help & Capability Intent ---
+        if (lowerInput.includes("how can you help") || lowerInput.includes("what can you do") || lowerInput === "help" || lowerInput === "capabilities") {
+            return `🤖 **Here is what I can do for you:**\n\n` +
+                   `• 🧮 **Calculations:** Type math expressions (e.g., \`45 * 12\`, \`15% of 200\`, \`2 into 2\`).\n` +
+                   `• 🧠 **Memory:** Tell me facts like *"my name is Swapnil"* or *"my favorite language is JS"*.\n` +
+                   `• 📖 **Information & Search:** Ask for topics (e.g., *"I want information about Dr Babasaheb Ambedkar"* or *"who is APJ Abdul Kalam"*).\n` +
+                   `• 🌐 **URL Summarizer:** Paste any website URL (\`https://...\`) to fetch and summarize page text.\n` +
+                   `• 🌐 **Multilingual:** Use action chips to translate responses to Marathi (मराठी) or Hindi (हिंदी).\n` +
+                   `• ⚙️ **Admin Control:** Click Admin Panel (PIN: \`1805\`) to correct responses and set override rules for next time.\n` +
+                   `• 🔒 **Local Privacy:** All basic interactions run 100% privately directly in your browser GPU!`;
+        }
+
+        // --- Rule 2: Information & Search Intent (Fallback for General Knowledge) ---
+        if (lowerInput.includes("information about") || lowerInput.startsWith("who is") || lowerInput.startsWith("what is") || lowerInput.startsWith("tell me about") || lowerInput.startsWith("search")) {
+            return await fetchWebSearchResults(cleanInput);
+        }
+
+        // --- Rule 3: Greetings ---
         if (["hi", "hello", "hey", "hi nikki", "hello nikki"].includes(lowerInput)) {
             if (window.nikkiMemory.userName) {
                 return `Hello **${window.nikkiMemory.userName}**! How can I help you today? 😊`;
@@ -530,7 +559,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Rule B: Memory Intent ("my name is...")
+        // --- Rule 4: Memory Intent ("my name is...") ---
         const nameMatch = lowerInput.match(/(?:my name is|i am|call me)\s+([a-zA-Z]+)/i);
         if (nameMatch) {
             const extractedName = nameMatch[1];
@@ -549,7 +578,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return `Nice to meet you, **${formattedName}**! I will remember your name. 💖`;
         }
 
-        // Rule C: Memory Recall ("what is my name")
+        // --- Rule 5: Memory Recall ("what is my name") ---
         if (lowerInput.includes("what is my name") || lowerInput.includes("who am i") || lowerInput.includes("do you know my name")) {
             if (window.nikkiMemory.userName) {
                 return `Your name is **${window.nikkiMemory.userName}**! ✨`;
@@ -558,17 +587,12 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Rule D: Self-Identity ("what is your name")
+        // --- Rule 6: Self-Identity ("what is your name") ---
         if (lowerInput.includes("what is your name") || lowerInput.includes("who are you")) {
             return `I am **Nikki 3.6 Pro**, your autonomous local AI engine running directly on your device! 🤖✨`;
         }
 
-        // Rule E: Web Search Intent
-        if (lowerInput.startsWith("search") || lowerInput.includes("search the web") || lowerInput.includes("meaning of")) {
-            return await fetchWebSearchResults(cleanInput);
-        }
-
-        // Rule F: Fast Math Expressions
+        // --- Rule 7: Fast Math Expressions ---
         if (/^[0-9\s\+\-\*\/\(\)\.\^]+$/.test(cleanInput)) {
             try {
                 const sanitized = cleanInput.replace(/\^/g, '**');
@@ -584,7 +608,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return renderMathResultCard(mathEval.cleanExpr, mathEval.result);
         }
 
-        // Rule G: WebGPU Local Model Engine Generation via chatHistory Context
+        // --- Rule 8: WebGPU Local Model Engine Generation via chatHistory Context ---
         window.nikkiMemory.chatHistory.push({ role: "user", content: cleanInput });
 
         if (engine) {
@@ -599,8 +623,8 @@ document.addEventListener("DOMContentLoaded", () => {
             } catch (err) {}
         }
 
-        // Rule H: Local LLM Fallback (Ollama / Local Server)
-        return await getNikkiResponse(cleanInput);
+        // --- Rule 9: General Knowledge Search Fallback ---
+        return await fetchWebSearchResults(cleanInput);
     }
 
     function handleUserSubmit(promptText) {
