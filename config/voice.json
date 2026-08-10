@@ -1,0 +1,21 @@
+{
+  "voice_engine": {
+    "primary": "IndicF5",
+    "primary_model": "ai4bharat/IndicF5",
+    "experimental": "Indic Parler-TTS",
+    "experimental_model": "ai4bharat/indic-parler-tts",
+    "languages_supported": [
+      "hi", "mr", "bn", "gu", "kn", "ml", "or", "pa", "ta", "te", "as", "en"
+    ],
+    "obsy_voice_profile": {
+      "gender": "Female",
+      "age_impression": "Young Adult",
+      "accent": "Indian Hindi",
+      "default_speed": 0.95,
+      "default_tone": "Warm & Expressive",
+      "clarity": 1.0,
+      "romance_warmth_bar": "Warmth: 80%, Softness: 90%, Energy: 60%, Romance: 60%, Clarity: 100%"
+    },
+    "reference_voice_dir": "voice/voices/obsy/hindi/"
+  }
+}
