@@ -171,6 +171,11 @@ Option 2: Final Answer
             else:
                 return self.tools.execute_tool("teach_memory", memory_text=user_goal)
 
+        # Rule 15: Alexa-style Voice Routine request
+        if any(w in goal_lower for w in ["good night", "good morning", "lockdown", "study mode", "routine"]):
+            print("🎙️ Executing Nikki Alexa-Style Voice Routine...")
+            return self.tools.execute_tool("run_voice_routine", routine_name=user_goal)
+
         return f"Nikki has received and processed your task: '{user_goal}'"
 
     def _parse_json(self, text: str) -> Optional[Dict[str, Any]]:

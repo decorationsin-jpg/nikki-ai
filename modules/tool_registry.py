@@ -23,6 +23,7 @@ from modules.health_checker import SystemHealthChecker
 from modules.memory_engine import MemoryEngine
 from modules.emotional_voice import EmotionalVoiceEngine
 from modules.android_termux_engine import AndroidTermuxEngine
+from modules.master_assistant_hub import MasterAssistantHub
 
 class ToolRegistry:
     def __init__(self):
@@ -47,6 +48,7 @@ class ToolRegistry:
         self.mem_eng = MemoryEngine()
         self.emo_voice = EmotionalVoiceEngine()
         self.termux = AndroidTermuxEngine()
+        self.hub = MasterAssistantHub()
 
     def get_tool_descriptions(self) -> str:
         return """
@@ -107,6 +109,7 @@ Available Tools:
 54. termux_speak(text): Speak out loud using native Android TTS via Termux API.
 55. termux_photo(save_path): Take a camera photo directly on Android phone via Termux API.
 56. termux_vibrate(duration_ms): Vibrate Android phone via Termux API.
+57. run_voice_routine(routine_name): Execute Alexa-style smart voice routine ('good night', 'good morning', 'lockdown', 'study').
 """
 
     def execute_tool(self, tool_name: str, **kwargs) -> str:
@@ -232,6 +235,8 @@ Available Tools:
                 return self.termux.take_photo_native(kwargs.get("save_path", "phone_photo.jpg"))
             elif tool_name == "termux_vibrate":
                 return self.termux.vibrate_native(kwargs.get("duration_ms", 500))
+            elif tool_name == "run_voice_routine":
+                return self.hub.run_routine(kwargs.get("routine_name", "good night"))
             else:
                 return f"Error: Unknown tool '{tool_name}'"
         except Exception as e:
