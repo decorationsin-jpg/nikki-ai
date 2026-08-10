@@ -1,0 +1,23 @@
+# Python temporary files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment & Dependencies
+.venv/
+env/
+venv/
+
+# Audio / Camera captures
+*.png
+*.jpg
+*.wav
+*.mp3
+
+# WhatsApp/Instagram user data cookies
+whatsapp_user_data/
+instagram_user_data/
+
+# OS specific files
+.DS_Store
+Thumbs.db

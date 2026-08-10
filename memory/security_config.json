@@ -1,0 +1,7 @@
+{
+  "master_pin_hash": "ec946e3381a1795c61304d9b6a987d6cfdfa38e8ec43105ff79442a987f2ffbe",
+  "armed_status": false,
+  "intruder_alert_phone": "",
+  "auto_capture_intruder": true,
+  "failed_access_attempts": 0
+}

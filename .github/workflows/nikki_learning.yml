@@ -1,0 +1,35 @@
+name: Nikki 24/7 Background Learning Daemon
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # Runs every 6 hours automatically on GitHub!
+  workflow_dispatch:      # Allows manual trigger anytime
+
+jobs:
+  learn:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Nikki Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          pip install requests duckduckgo_search beautifulsoup4
+
+      - name: Run Nikki 24/7 Learning Cycle
+        run: |
+          python -c "from modules.continuous_learning_daemon import ContinuousLearningDaemon; daemon = ContinuousLearningDaemon(); daemon.run_learning_cycle()"
+
+      - name: Commit & Push Updated Memory Back to GitHub
+        run: |
+          git config --local user.email "nikki-ai@github.com"
+          git config --local user.name "Nikki AI Assistant"
+          git add memory/
+          git commit -m "🧠 Nikki 24/7 Learning Daemon: Updated Knowledge Base" || exit 0
+          git push
