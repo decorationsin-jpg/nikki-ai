@@ -4,7 +4,10 @@ Monitors CPU, RAM, Disk usage, top memory processes, and performs cache cleanup.
 """
 import sys
 import gc
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from typing import Dict, Any
 
 class SystemOptimizer:

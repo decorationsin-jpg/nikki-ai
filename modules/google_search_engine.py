@@ -6,8 +6,13 @@ and web result links, and deliver verified answers as per Google Search results.
 import json
 import urllib.request
 import urllib.parse
-from bs4 import BeautifulSoup
+import re
 from typing import Dict, Any, List
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
 
 class GoogleSearchEngine:
     """

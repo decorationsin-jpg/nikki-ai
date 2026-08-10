@@ -1,7 +1,12 @@
 import json
 import urllib.request
 import urllib.parse
-from bs4 import BeautifulSoup
+import re
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:
+    BeautifulSoup = None
 
 class FreeWebSearch:
     """

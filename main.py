@@ -4,6 +4,12 @@ Supports Text CLI, Autonomous Task Engine, & Continuous Voice Mode!
 """
 
 import sys
+if hasattr(sys.stdout, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 from modules.agent_loop import AutonomousAgentLoop
 from modules.voice_engine import VoiceEngine
 
